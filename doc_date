@@ -9,8 +9,8 @@ O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolv
 
 ### Escopo: O que o sistema FAZ
 * Cadastra o jogador solicitando um nome de usuário (*nickname*) básico antes de iniciar a partida.
-* Apresenta uma sequência de **60 perguntas** no formato Certo/Errado (sendo 50 da fase normal e 10 pertencentes à Fase Bônus).
-* Controla um tempo limite de 30 segundos por pergunta.
+* Apresenta uma sequência de **60 perguntas** no formato de alternativas (sendo 50 da fase normal e 10 pertencentes à Fase Bônus).
+* Controla um tempo limite de 60 segundos por pergunta.
 * Calcula a pontuação do jogador combinando a pontuação base por acerto e um bônus por segundos restantes no temporizador.
 * Registra e exibe o ranking geral de pontuação contendo todos os jogadores que já jogaram até o momento, ordenado pela maior pontuação (com o tempo total de resposta como critério de desempate).
 * Destaca a posição do jogador atual na tabela do ranking geral ao final da partida.
@@ -37,7 +37,7 @@ O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolv
 > 
 > Antes de começar a responder, o jogador faz um cadastro básico informando apenas o seu nome de usuário. O nome é obrigatório para identificar a jogada no ranking final. Assim que o cadastro é feito, o jogo se inicia imediatamente.
 > 
-> O jogo contém exatamente **60 perguntas** no formato Certo/Errado. As perguntas de 1 a 50 fazem parte da fase normal e as perguntas de 51 a 60 pertencem à Fase Bônus. Cada pergunta possui um enunciado, o gabarito (Certo ou Errado) e um temporizador de 30 segundos.
+> O jogo contém exatamente **60 perguntas** no formato de alternativas. As perguntas de 1 a 50 fazem parte da fase normal e as perguntas de 51 a 60 pertencem à Fase Bônus. Cada pergunta possui um enunciado, o gabarito (Certo ou Errado) e um temporizador de 30 segundos.
 > 
 > Quando o jogador escolhe uma alternativa ou o tempo esgota, o sistema calcula os pontos daquela questão. Acertar a questão garante uma pontuação base mais um bônus proporcional aos segundos que sobraram no temporizador. Se o tempo esgotar ou a resposta for incorreta, o jogador não pontua naquela questão.
 > 
