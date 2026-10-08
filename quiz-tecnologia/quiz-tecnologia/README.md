@@ -1,4 +1,4 @@
-# Tech Trivia
+# DevClash
 
 Quiz de tecnologia em HTML, CSS e JavaScript puro (sem frameworks), pensado para o GitHub Pages, com um backend opcional em Node.js + PostgreSQL.
 
