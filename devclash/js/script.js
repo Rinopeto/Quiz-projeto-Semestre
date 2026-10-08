@@ -8,7 +8,9 @@ const CONFIG = {
   WARNING_SECONDS: 10,
   MAX_POINTS_PER_QUESTION: 10,
   WRONG_ANSWER_POINTS: 1, // resposta errada vale 1 ponto; tempo esgotado vale 0
-  QUESTIONS_PER_GAME: 10, // quantas perguntas sorteadas por partida (0 = todas)
+  QUESTIONS_PER_GAME: 0, // quantas perguntas NORMAIS entram na partida (0 = todas)
+  BONUS_PER_GAME: 0, // quantas perguntas BÔNUS entram, sempre depois das normais (0 = todas)
+  API_QUESTIONS_LIMIT: 50, // quantas perguntas pedir à API (máximo aceito por GET /api/questions)
   SORT_BY_DIFFICULTY: true, // dentro da partida, vai do fácil ao difícil (a ordem é sorteada dentro de cada nível)
   SHUFFLE_OPTIONS: true, // embaralha a ordem das alternativas
   RANKING_LIMIT: 10,
@@ -63,13 +65,23 @@ function shuffle(array) {
 // Sorteia as perguntas da partida e embaralha as alternativas.
 // Cada alternativa guarda seu índice original, então embaralhar não afeta correctAnswer.
 function prepareQuestions(rawQuestions) {
-  const picked = shuffle(rawQuestions);
-  const limited = CONFIG.QUESTIONS_PER_GAME ? picked.slice(0, CONFIG.QUESTIONS_PER_GAME) : picked;
-  if (CONFIG.SORT_BY_DIFFICULTY) {
-    const levelOf = (q) => (DIFFICULTIES[q.difficulty] ? DIFFICULTIES[q.difficulty].level : 2);
-    limited.sort((a, b) => levelOf(a) - levelOf(b)); // sort estável: mantém o sorteio dentro de cada nível
-  }
-  return limited.map((q) => {
+  const levelOf = (q) => (DIFFICULTIES[q.difficulty] ? DIFFICULTIES[q.difficulty].level : 2);
+
+  // Embaralha, limita (se configurado) e ordena do fácil ao difícil.
+  const arrange = (list, max) => {
+    const picked = shuffle(list);
+    const limited = max ? picked.slice(0, max) : picked;
+    if (CONFIG.SORT_BY_DIFFICULTY) {
+      limited.sort((a, b) => levelOf(a) - levelOf(b)); // sort estável: mantém o sorteio dentro de cada nível
+    }
+    return limited;
+  };
+
+  // As perguntas bônus vêm sempre depois das normais.
+  const regular = arrange(rawQuestions.filter((q) => !q.bonus), CONFIG.QUESTIONS_PER_GAME);
+  const bonus = arrange(rawQuestions.filter((q) => q.bonus), CONFIG.BONUS_PER_GAME);
+
+  return [...regular, ...bonus].map((q) => {
     const options = q.options.map((text, originalIndex) => ({ text, originalIndex }));
     return { ...q, options: CONFIG.SHUFFLE_OPTIONS ? shuffle(options) : options };
   });
@@ -627,7 +639,7 @@ async function startQuiz() {
   timer.stop();
   showScreen("loading");
   try {
-    const raw = await loadQuestions(CONFIG.QUESTIONS_PER_GAME);
+    const raw = await loadQuestions(CONFIG.API_QUESTIONS_LIMIT);
     if (!Array.isArray(raw) || raw.length === 0) throw new Error("Nenhuma pergunta disponível.");
     state.questions = prepareQuestions(raw);
     resetState();
