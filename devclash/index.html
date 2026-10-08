@@ -20,6 +20,20 @@
   </header>
 
   <main class="app">
+    <!-- Acessibilidade: leitura em voz alta para pessoas de baixa visão -->
+    <section class="a11y-bar" aria-label="Acessibilidade: leitura em voz alta">
+      <button id="tts-toggle" class="btn btn-secondary btn-small" type="button" aria-pressed="false">🔊 Leitura em voz alta: desligada</button>
+      <button id="tts-repeat" class="btn btn-secondary btn-small" type="button">Ler novamente</button>
+      <label id="tts-rate-label" class="tts-rate">Velocidade
+        <select id="tts-rate">
+          <option value="0.8">Lenta</option>
+          <option value="1" selected>Normal</option>
+          <option value="1.3">Rápida</option>
+        </select>
+      </label>
+      <p id="tts-unsupported" class="hint" hidden>Este navegador não oferece leitura em voz alta. Tente o Chrome, o Edge ou o Safari.</p>
+    </section>
+
     <noscript>
       <div class="card"><p>Este quiz precisa de JavaScript para funcionar. Ative-o no navegador e recarregue a página.</p></div>
     </noscript>
