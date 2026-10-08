@@ -136,17 +136,6 @@ const LOCAL_QUESTIONS = [
     sourceUrl: "https://pt.wikipedia.org/wiki/SQL"
   },
   {
-    id: 12,
-    category: "Fundamentos de SQL",
-    difficulty: "facil",
-    question: "Qual comando SQL insere uma nova linha em uma tabela?",
-    options: ["`ADD ROW`", "`INSERT INTO`", "`APPEND`", "`CREATE ROW`"],
-    correctAnswer: 1,
-    explanation: "`INSERT INTO` adiciona novas linhas a uma tabela, por exemplo `INSERT INTO clientes (nome) VALUES ('Ana')`. Para alterar linhas que já existem usa-se o `UPDATE`.",
-    sourceName: "Documentação do PostgreSQL: Inserting Data",
-    sourceUrl: "https://www.postgresql.org/docs/current/dml-insert.html"
-  },
-  {
     id: 13,
     category: "Consultas SQL",
     difficulty: "facil",
@@ -156,17 +145,6 @@ const LOCAL_QUESTIONS = [
     explanation: "`ORDER BY` ordena o resultado por uma ou mais colunas, em ordem crescente (`ASC`, o padrão) ou decrescente (`DESC`). O `GROUP BY` serve para agrupar linhas, não para ordená-las.",
     sourceName: "Documentação do PostgreSQL: Sorting Rows",
     sourceUrl: "https://www.postgresql.org/docs/current/queries-order.html"
-  },
-  {
-    id: 14,
-    category: "Fundamentos de SQL",
-    difficulty: "facil",
-    question: "Qual comando altera os valores de linhas que já existem em uma tabela?",
-    options: ["`MODIFY`", "`CHANGE`", "`UPDATE`", "`ALTER`"],
-    correctAnswer: 2,
-    explanation: "`UPDATE` modifica valores de linhas existentes e normalmente vem com `WHERE` para escolher quais linhas mudar. Sem `WHERE`, todas as linhas da tabela são alteradas. O `ALTER` muda a estrutura (como colunas), não os dados.",
-    sourceName: "Documentação do PostgreSQL: Updating Data",
-    sourceUrl: "https://www.postgresql.org/docs/current/dml-update.html"
   },
   {
     id: 15,
@@ -279,17 +257,6 @@ const LOCAL_QUESTIONS = [
     sourceUrl: "https://www.postgresql.org/docs/current/ddl-constraints.html"
   },
   {
-    id: 25,
-    category: "Modelagem e DDL",
-    difficulty: "medio",
-    question: "Qual comando esvazia uma tabela inteira de forma rápida, sem aceitar cláusula `WHERE`?",
-    options: ["`TRUNCATE`", "`DROP TABLE`", "`DELETE`", "`VACUUM`"],
-    correctAnswer: 0,
-    explanation: "`TRUNCATE` remove todas as linhas de uma vez, sem percorrê-las uma a uma, e por isso é bem mais rápido que um `DELETE` sem `WHERE` em tabelas grandes. A estrutura da tabela é mantida. O `DELETE` aceita `WHERE`, e o `DROP TABLE` apaga a tabela inteira.",
-    sourceName: "Documentação do PostgreSQL: TRUNCATE",
-    sourceUrl: "https://www.postgresql.org/docs/current/sql-truncate.html"
-  },
-  {
     id: 26,
     category: "Modelagem e DDL",
     difficulty: "medio",
@@ -354,28 +321,6 @@ const LOCAL_QUESTIONS = [
     explanation: "O `jsonb` guarda o JSON em formato binário decomposto: a gravação é um pouco mais lenta, mas as consultas são bem mais rápidas e ele aceita índices (como o GIN). O `json` guarda o texto exato, preservando espaços e a ordem das chaves.",
     sourceName: "Documentação do PostgreSQL: JSON Types",
     sourceUrl: "https://www.postgresql.org/docs/current/datatype-json.html"
-  },
-  {
-    id: 32,
-    category: "Consultas SQL",
-    difficulty: "medio",
-    question: "Qual operador do PostgreSQL faz busca por padrão ignorando a diferença entre maiúsculas e minúsculas?",
-    options: ["`LIKE`", "`ILIKE`", "`SIMILAR`", "`MATCHES`"],
-    correctAnswer: 1,
-    explanation: "`ILIKE` funciona como o `LIKE`, mas sem diferenciar maiúsculas de minúsculas, por exemplo `nome ILIKE 'ana%'`. É uma extensão do PostgreSQL. O `LIKE` diferencia maiúsculas de minúsculas.",
-    sourceName: "Documentação do PostgreSQL: Pattern Matching",
-    sourceUrl: "https://www.postgresql.org/docs/current/functions-matching.html"
-  },
-  {
-    id: 33,
-    category: "Desempenho",
-    difficulty: "dificil",
-    question: "Qual tipo de índice do PostgreSQL é indicado para colunas `jsonb` e arrays, em buscas do tipo 'contém'?",
-    options: ["B-tree", "Hash", "BRIN", "GIN"],
-    correctAnswer: 3,
-    explanation: "O GIN (Generalized Inverted Index) indexa valores compostos, como arrays e `jsonb`, e atende bem a operadores como `@>` (contém). O B-tree é o padrão para comparações simples, o Hash serve para igualdade e o BRIN para tabelas enormes com dados em ordem física.",
-    sourceName: "Documentação do PostgreSQL: Index Types",
-    sourceUrl: "https://www.postgresql.org/docs/current/indexes-types.html"
   },
   {
     id: 34,
@@ -513,6 +458,66 @@ const LOCAL_QUESTIONS = [
     explanation: "O Creeper foi criado em 1971 por Bob Thomas, como um experimento: um programa que passava de computador em computador na ARPANET exibindo uma mensagem provocativa. Depois surgiu o Reaper, feito para removê-lo. O Brain, de 1986, é considerado o primeiro vírus para PCs.",
     sourceName: "CyberSec Brasil",
     sourceUrl: "https://www.cybersecbrazil.com.br/post/o-creeper-o-primeiro-v%C3%ADrus-de-computador-da-hist%C3%B3ria"
+  },
+  {
+    id: 46,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "facil",
+    question: "Em que ano Linus Torvalds anunciou e lançou a primeira versão do kernel Linux?",
+    options: ["1983", "1995", "2001", "1991"],
+    correctAnswer: 3,
+    explanation: "Em agosto de 1991, o estudante finlandês Linus Torvalds anunciou que estava criando um novo sistema operacional, e a primeira versão do kernel foi lançada em setembro daquele ano. O ano de 1983 é o do anúncio do projeto GNU, de Richard Stallman.",
+    sourceName: "Wikipedia: Linux",
+    sourceUrl: "https://en.wikipedia.org/wiki/Linux"
+  },
+  {
+    id: 47,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "medio",
+    question: "Qual rede de computadores, financiada pelo Departamento de Defesa dos EUA, é considerada a precursora da internet?",
+    options: ["Ethernet", "ARPANET", "Bluetooth", "Wi-Fi"],
+    correctAnswer: 1,
+    explanation: "A ARPANET, financiada pela agência ARPA do Departamento de Defesa dos EUA, enviou sua primeira mensagem em 1969 e é considerada a precursora da internet. Ethernet, Bluetooth e Wi-Fi são tecnologias de conexão, não a rede que deu origem à internet.",
+    sourceName: "Wikipedia: ARPANET",
+    sourceUrl: "https://en.wikipedia.org/wiki/ARPANET"
+  },
+  {
+    id: 48,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "medio",
+    question: "Quem propôs o modelo relacional de banco de dados, em um artigo de 1970 enquanto trabalhava na IBM?",
+    options: ["Charles Bachman", "Michael Stonebraker", "Edgar F. Codd", "Larry Ellison"],
+    correctAnswer: 2,
+    explanation: "Edgar F. Codd, pesquisador da IBM, publicou em 1970 o artigo que propôs o modelo relacional, base dos bancos de dados SQL. Charles Bachman ficou conhecido pelo modelo de rede, Michael Stonebraker criou o Ingres e o POSTGRES (origem do PostgreSQL) e Larry Ellison cofundou a Oracle.",
+    sourceName: "Wikipedia: Edgar F. Codd",
+    sourceUrl: "https://en.wikipedia.org/wiki/Edgar_F._Codd"
+  },
+  {
+    id: 49,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "dificil",
+    question: "Qual navegador, lançado em 1993 pelo NCSA, ajudou a popularizar a Web por ter interface gráfica e mostrar imagens junto com o texto?",
+    options: ["Mosaic", "Netscape Navigator", "Internet Explorer", "Firefox"],
+    correctAnswer: 0,
+    explanation: "O NCSA Mosaic foi criado por Marc Andreessen e Eric Bina, e o seu lançamento em 1993 popularizou a Web graças à interface gráfica e às imagens exibidas junto com o texto. O Netscape Navigator veio em 1994, o Internet Explorer em 1995 e o Firefox em 2004.",
+    sourceName: "Wikipedia: NCSA Mosaic",
+    sourceUrl: "https://en.wikipedia.org/wiki/NCSA_Mosaic"
+  },
+  {
+    id: 50,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "dificil",
+    question: "Qual linguagem de programação, criada por uma equipe da IBM liderada por John Backus e lançada em 1957, foi uma das primeiras linguagens de alto nível amplamente usadas?",
+    options: ["COBOL", "BASIC", "Pascal", "FORTRAN"],
+    correctAnswer: 3,
+    explanation: "O FORTRAN (Formula Translation), desenvolvido por uma equipe da IBM liderada por John Backus, teve o seu primeiro compilador entregue em 1957 e foi muito usado em computação científica. O COBOL surgiu em 1959, o BASIC em 1964 e o Pascal em 1970.",
+    sourceName: "Wikipedia: Fortran",
+    sourceUrl: "https://en.wikipedia.org/wiki/Fortran"
   }
 ];
 
