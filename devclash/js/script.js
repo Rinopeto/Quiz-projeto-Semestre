@@ -254,6 +254,182 @@ const timer = {
 };
 
 /* =========================================================
+ * Leitura em voz alta (acessibilidade para baixa visão)
+ * Usa a Web Speech API do navegador (speechSynthesis): não precisa de biblioteca nem de internet.
+ * ========================================================= */
+const speech = {
+  STORAGE_KEY: "devclash:voz",
+  RATES: [0.8, 1, 1.3],
+  supported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
+  enabled: false, // leitura automática de cada pergunta, resposta e resultado
+  rate: 1,
+  voice: null,
+  pending: 0, // pedaços de fala ainda na fila
+  generation: 0, // identifica a fala atual (ignora eventos de falas canceladas)
+  lastText: "", // texto da tela atual, usado por "Ler novamente"
+  onChange: null,
+
+  load() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(this.STORAGE_KEY));
+      if (saved) {
+        this.enabled = saved.enabled === true;
+        if (this.RATES.includes(saved.rate)) this.rate = saved.rate;
+      }
+    } catch (err) {
+      // sem localStorage: usa os padrões
+    }
+  },
+
+  save() {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify({ enabled: this.enabled, rate: this.rate }));
+    } catch (err) {
+      // sem localStorage: a preferência vale só nesta visita
+    }
+  },
+
+  pickVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    this.voice =
+      voices.find((v) => v.lang === "pt-BR") ||
+      voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("pt")) ||
+      null;
+  },
+
+  init() {
+    if (!this.supported) return;
+    this.load();
+    this.pickVoice();
+    if (typeof window.speechSynthesis.addEventListener === "function") {
+      window.speechSynthesis.addEventListener("voiceschanged", () => this.pickVoice());
+    }
+  },
+
+  notify() {
+    if (this.onChange) this.onChange();
+  },
+
+  // Quebra o texto em frases curtas: alguns navegadores interrompem falas muito longas.
+  chunks(text) {
+    const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+    const out = [];
+    sentences.forEach((sentence) => {
+      let rest = sentence.trim();
+      while (rest.length > 200) {
+        let cut = rest.lastIndexOf(",", 200);
+        if (cut < 60) cut = rest.lastIndexOf(" ", 200);
+        if (cut < 1) cut = 200;
+        out.push(rest.slice(0, cut + 1).trim());
+        rest = rest.slice(cut + 1).trim();
+      }
+      if (rest) out.push(rest);
+    });
+    return out;
+  },
+
+  speak(text) {
+    if (!this.supported || !text) return;
+    this.stop();
+    const generation = this.generation;
+    const parts = this.chunks(text);
+    this.pending = parts.length;
+    this.notify();
+    // Pequena pausa depois do cancel(): evita que alguns navegadores descartem a fala nova.
+    setTimeout(() => {
+      if (generation !== this.generation) return;
+      parts.forEach((part) => {
+        const utterance = new SpeechSynthesisUtterance(part);
+        utterance.lang = "pt-BR";
+        if (this.voice) utterance.voice = this.voice;
+        utterance.rate = this.rate;
+        const done = () => {
+          if (generation !== this.generation) return;
+          this.pending = Math.max(0, this.pending - 1);
+          this.notify();
+        };
+        utterance.onend = done;
+        utterance.onerror = done;
+        window.speechSynthesis.speak(utterance);
+      });
+    }, 60);
+  },
+
+  stop() {
+    this.generation++;
+    this.pending = 0;
+    if (this.supported) window.speechSynthesis.cancel();
+    this.notify();
+  },
+
+  // Guarda o texto da tela (para "Ler novamente") e, com a leitura ligada, fala na hora.
+  announce(text) {
+    this.lastText = text;
+    if (this.enabled) this.speak(text);
+  }
+};
+
+// Troca símbolos de código por palavras, para a voz não "engasgar" (ex.: "NULL = NULL").
+function codeToSpeech(code) {
+  return code
+    .replace(/<>/g, " diferente de ")
+    .replace(/>=/g, " maior ou igual a ")
+    .replace(/<=/g, " menor ou igual a ")
+    .replace(/=/g, " igual a ")
+    .replace(/>/g, " maior que ")
+    .replace(/</g, " menor que ")
+    .replace(/\*/g, " asterisco ")
+    .replace(/_/g, " ");
+}
+
+// Prepara um texto do quiz para ser falado: trechos entre crases viram palavras e símbolos de enfeite somem.
+function toSpeech(text) {
+  return String(text)
+    .split("`")
+    .map((part, i) => (i % 2 === 1 ? codeToSpeech(part) : part))
+    .join("")
+    .replace(/[✓✗⏰⚠★●○]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function speechForStart() {
+  return "DevClash. Pronto para o desafio? Responda perguntas de SQL e bancos de dados, uma por vez. Digite seu nome e aperte o botão Começar.";
+}
+
+function speechForQuestion(question, index, total) {
+  const info = DIFFICULTIES[question.difficulty];
+  const parts = [`Pergunta ${index + 1} de ${total}.`];
+  if (question.bonus) parts.push("Pergunta bônus.");
+  if (info) parts.push(`Dificuldade: ${info.label}.`);
+  parts.push(question.question);
+  question.options.forEach((opt, i) => {
+    parts.push(`Alternativa ${CONFIG.OPTION_LABELS[i] || i + 1}: ${opt.text}.`);
+  });
+  return toSpeech(parts.join(" "));
+}
+
+function speechForFeedback(question, status, points, correctText) {
+  const parts = [];
+  if (status === "correct") parts.push(`Resposta correta! ${pluralPoints(points)}.`);
+  else if (status === "incorrect") parts.push(`Resposta incorreta. ${pluralPoints(points)} por tentar.`);
+  else parts.push("Tempo esgotado. Zero pontos.");
+  if (status !== "correct") parts.push(`A resposta certa é: ${correctText}.`);
+  if (question.explanation) parts.push(`Você sabia? ${question.explanation}`);
+  if (question.sourceName) parts.push(`Fonte: ${question.sourceName}.`);
+  return toSpeech(parts.join(" "));
+}
+
+function speechForResult(summary) {
+  return toSpeech(
+    `Fim de jogo. ${getEndMessage(summary, state.playerName)} ` +
+      `Você fez ${state.totalScore} de ${summary.maxScore} pontos. ` +
+      `Acertos: ${summary.correct}. Erros: ${summary.wrong}. Sem resposta por tempo: ${summary.timeouts}. ` +
+      "O ranking está logo abaixo."
+  );
+}
+
+/* =========================================================
  * Interface (única camada que toca o DOM)
  * ========================================================= */
 const $ = (id) => document.getElementById(id);
@@ -297,7 +473,12 @@ const ui = {
   rankingTitle: $("ranking-title"),
   rankingStatus: $("ranking-status"),
   restartBtn: $("restart-btn"),
-  endBtn: $("end-btn")
+  endBtn: $("end-btn"),
+  ttsToggle: $("tts-toggle"),
+  ttsRepeat: $("tts-repeat"),
+  ttsRate: $("tts-rate"),
+  ttsRateLabel: $("tts-rate-label"),
+  ttsUnsupported: $("tts-unsupported")
 };
 
 function showScreen(name) {
@@ -346,6 +527,24 @@ function renderProgress(index, total) {
   ui.progress.setAttribute("aria-valuenow", index + 1);
 }
 
+// Atualiza os botões de leitura em voz alta (texto sempre diz o estado, não só a cor).
+function renderTtsControls() {
+  if (!speech.supported) {
+    ui.ttsToggle.hidden = true;
+    ui.ttsRepeat.hidden = true;
+    ui.ttsRateLabel.hidden = true;
+    ui.ttsUnsupported.hidden = false;
+    return;
+  }
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "🔊 ";
+  ui.ttsToggle.replaceChildren(icon, document.createTextNode(`Leitura em voz alta: ${speech.enabled ? "ligada" : "desligada"}`));
+  ui.ttsToggle.setAttribute("aria-pressed", String(speech.enabled));
+  ui.ttsRepeat.textContent = speech.pending > 0 ? "Parar leitura" : "Ler novamente";
+  ui.ttsRate.value = String(speech.rate);
+}
+
 function renderQuestion(question, index, total) {
   renderProgress(index, total);
   ui.totalScore.textContent = state.totalScore;
@@ -382,6 +581,7 @@ function renderQuestion(question, index, total) {
   });
 
   ui.questionText.focus({ preventScroll: true }); // leitor de tela anuncia a nova pergunta
+  speech.announce(speechForQuestion(question, index, total));
 }
 
 function renderTimer(secondsLeft) {
@@ -453,6 +653,7 @@ function renderAnswerResult(question, selectedIndex, status, points) {
   ui.actionBtn.textContent = isLast ? "Ver resultado" : "Próxima pergunta";
   ui.actionBtn.disabled = false;
   ui.actionBtn.focus({ preventScroll: true }); // as alternativas foram desabilitadas; mantém o foco no fluxo
+  speech.announce(speechForFeedback(question, status, points, correctText));
 }
 
 function renderRanking(rows) {
@@ -531,6 +732,13 @@ function selectOption(originalIndex) {
   if (state.status !== "answering") return;
   state.selectedOption = originalIndex;
   renderSelection(originalIndex);
+
+  if (speech.enabled) {
+    const question = currentQuestion();
+    const position = question.options.findIndex((o) => o.originalIndex === originalIndex);
+    const label = CONFIG.OPTION_LABELS[position] || position + 1;
+    speech.speak(toSpeech(`Selecionada: alternativa ${label}: ${question.options[position].text}.`));
+  }
 }
 
 function confirmAnswer() {
@@ -569,7 +777,9 @@ function nextQuestion() {
 function finishQuiz() {
   timer.stop();
   state.status = "idle";
-  renderResult(getSummary());
+  const summary = getSummary();
+  renderResult(summary);
+  speech.announce(speechForResult(summary));
   showScreen("result");
   ui.resultTitle.focus({ preventScroll: true });
   showRanking(buildMatchPayload());
@@ -672,6 +882,7 @@ function goToStart() {
   timer.stop();
   state.status = "idle";
   showScreen("start");
+  speech.announce(speechForStart());
   updateStartButton();
   ui.playerName.focus();
   ui.playerName.select();
@@ -700,6 +911,31 @@ ui.actionBtn.addEventListener("click", handleActionClick);
 ui.restartBtn.addEventListener("click", goToStart);
 ui.endBtn.addEventListener("click", handleEndNow);
 ui.retryBtn.addEventListener("click", startQuiz);
+
+ui.ttsToggle.addEventListener("click", () => {
+  speech.enabled = !speech.enabled;
+  speech.save();
+  if (speech.enabled) speech.speak(`Leitura em voz alta ligada. ${speech.lastText}`);
+  else speech.stop();
+  renderTtsControls();
+});
+ui.ttsRepeat.addEventListener("click", () => {
+  if (speech.pending > 0) speech.stop();
+  else speech.speak(speech.lastText);
+});
+ui.ttsRate.addEventListener("change", () => {
+  speech.rate = Number(ui.ttsRate.value) || 1;
+  speech.save();
+  if (speech.enabled) speech.speak(speech.lastText); // repete já na nova velocidade
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") speech.stop(); // Esc interrompe a leitura
+});
+
+speech.onChange = renderTtsControls;
+speech.init();
+speech.lastText = speechForStart();
+renderTtsControls();
 
 // O quiz só começa quando o jogador informa o nome e clica em "Começar".
 updateStartButton();
