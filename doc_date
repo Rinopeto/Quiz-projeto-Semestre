@@ -1,0 +1,71 @@
+# DevClash — Passo 1: Contexto, Minimundo e Requisitos
+
+---
+
+## 1. Contexto e Escopo
+
+### Contexto
+O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolvedores realizarem testes de conhecimento em Desenvolvimento de Software e banco de dados PostgreSQL. O sistema permite o cadastro simples de jogadores, disponibiliza rodadas com um banco expandido de perguntas (incluindo uma fase bônus ao final), pontua por acerto e tempo de resposta, e exibe ao término da partida um ranking geral de pontuação acumulado entre todos os participantes.
+
+### Escopo: O que o sistema FAZ
+* Cadastra o jogador solicitando um nome de usuário (*nickname*) básico antes de iniciar a partida.
+* Apresenta uma sequência de **60 perguntas** no formato de alternativas (sendo 50 da fase normal e 10 pertencentes à Fase Bônus).
+* Controla um tempo limite de 60 segundos por pergunta.
+* Calcula a pontuação do jogador combinando a pontuação base por acerto e um bônus por segundos restantes no temporizador.
+* Registra e exibe o ranking geral de pontuação contendo todos os jogadores que já jogaram até o momento, ordenado pela maior pontuação (com o tempo total de resposta como critério de desempate).
+* Destaca a posição do jogador atual na tabela do ranking geral ao final da partida.
+* Garante a persistência local do ranking entre sessões do navegador através de `localStorage`.
+
+### Escopo: O que o sistema NÃO FAZ
+* Não exige autenticação complexa, senha, e-mail ou recuperação de conta (apenas o cadastro do *nickname*).
+* Não gera ou edita perguntas dinamicamente durante a partida.
+* Não utiliza efeitos sonoros na interface.
+* Não persiste dados em um banco de dados relacional remoto no protótipo de front-end (utiliza armazenamento local/`localStorage`).
+
+---
+
+## 2. Usuários do Sistema
+
+* **Jogador / Estudante:** Informa seu nome, responde às 60 perguntas dentro do tempo limite, visualiza seu desempenho individual e consulta sua colocação no ranking geral.
+* **Administrador / Professor:** Cadastra e mantém o banco de perguntas e as respostas corretas no sistema.
+
+---
+
+## 3. Minimundo (Voz do Cliente)
+
+> "Somos uma plataforma de treino para desenvolvedores e queremos o **DevClash**, um jogo de quiz de conhecimento em tecnologia e PostgreSQL. 
+> 
+> Antes de começar a responder, o jogador faz um cadastro básico informando apenas o seu nome de usuário. O nome é obrigatório para identificar a jogada no ranking final. Assim que o cadastro é feito, o jogo se inicia imediatamente.
+> 
+> O jogo contém exatamente **60 perguntas** no formato de alternativas. As perguntas de 1 a 50 fazem parte da fase normal e as perguntas de 51 a 60 pertencem à Fase Bônus. Cada pergunta possui um enunciado, o gabarito (Certo ou Errado) e um temporizador de 30 segundos.
+> 
+> Quando o jogador escolhe uma alternativa ou o tempo esgota, o sistema calcula os pontos daquela questão. Acertar a questão garante uma pontuação base mais um bônus proporcional aos segundos que sobraram no temporizador. Se o tempo esgotar ou a resposta for incorreta, o jogador não pontua naquela questão.
+> 
+> Ao responder a 60ª pergunta, o jogo finaliza e apresenta a tela do ranking de pontuação geral. O ranking lista todos os jogadores que já jogaram até o presente momento, ordenando primeiro pela maior pontuação acumulada e, em caso de empate na pontuação, pelo menor tempo total de resposta. Para facilitar a visualização, a linha do jogador recém-cadastrado é destacada na tabela de ranking."
+
+---
+
+## 4. Requisitos e Regras de Negócio
+
+### Requisitos de Dados e Regras de Negócio (RD / RN)
+* **RD01 (Regra de Negócio):** O nome do usuário (*nickname*) é obrigatório para iniciar a partida e não pode ser vazio.
+* **RD02 (Regra de Negócio):** Cada pergunta possui um código identificador, um enunciado, a indicação de fase (Normal ou Bônus) e a resposta correta (Certo ou Errado).
+* **RD03 (Regra de Negócio):** O tempo limite para resposta de cada pergunta é fixado em exatamente 30 segundos.
+* **RD04 (Regra de Negócio):** As perguntas de 51 a 60 devem ser tratadas como Fase Bônus, possuindo pontuação diferenciada.
+* **RD05 (Regra de Negócio):** A pontuação de cada acerto é calculada somando a pontuação base da fase com o bônus de 2 pontos por segundo restante no temporizador.
+* **RD06 (Regra de Negócio):** O registro do ranking armazena o nome do jogador, a pontuação total obtida e o tempo total acumulado em todas as perguntas.
+* **RD07 (Regra de Negócio):** O ranking deve ser ordenado de forma decrescente pela pontuação total; em caso de empate, o desempate é feito pelo menor tempo total de resposta.
+
+### Requisitos Funcionais (RF / RA)
+* **RF01 (Funcional):** O sistema deve fornecer uma tela inicial para o cadastro básico do nome do jogador antes de iniciar as perguntas.
+* **RF02 (Funcional):** O sistema deve exibir as 60 perguntas em sequência, controlando individualmente o tempo limite de 30 segundos para cada uma.
+* **RF03 (Funcional):** O sistema deve calcular automaticamente os pontos obtidos em cada questão com base no acerto e no tempo restante.
+* **RF04 (Funcional):** O sistema deve apresentar a tela final com o ranking de pontuação geral imediatamente após o término da 60ª pergunta.
+* **RF05 (Funcional):** O sistema deve aplicar um destaque visual no registro do jogador atual dentro da tabela do ranking geral.
+* **RF06 (Funcional):** O sistema deve permitir reiniciar uma nova partida a partir da tela final de ranking.
+
+### Requisitos Não Funcionais (RNF)
+* **RNF01 (Tecnologia):** A interface deve ser desenvolvida em HTML5, CSS3 e JavaScript puro.
+* **RNF02 (Persistência):** Os dados do ranking devem ser mantidos localmente via `localStorage` do navegador para preservar os registros entre acessos.
+* **RNF03 (Design / Usabilidade):** A interface deve seguir a paleta visual do projeto (*Classic Postgres Elephant*) e ser responsiva.
+* **RNF04 (Audio/Acessibilidade):** O sistema não deve utilizar efeitos ou alertas sonoros.

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DevClash: desafios de SQL e bancos de dados.">
+  <title>DevClash</title>
+  <!-- Fonte de código JetBrains Mono (Google Fonts); sem internet cai na fonte monoespaçada do sistema -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="brand">Dev<span>Clash</span></h1>
+      <p class="tagline">Desafios de SQL e bancos de dados</p>
+    </div>
+  </header>
+
+  <main class="app">
+    <noscript>
+      <div class="card"><p>Este quiz precisa de JavaScript para funcionar. Ative-o no navegador e recarregue a página.</p></div>
+    </noscript>
+
+    <!-- Início: nome do jogador (RQ01) -->
+    <section id="screen-start" class="screen" aria-labelledby="start-title">
+      <div class="card">
+        <h2 id="start-title" class="card-title">Pronto para o desafio?</h2>
+        <p class="muted">Responda perguntas de SQL e bancos de dados, uma por vez. Quanto mais rápido você acerta, mais pontos ganha (até 10 por pergunta). Errou? Você ainda leva 1 ponto e descobre uma curiosidade!</p>
+
+        <p class="legend-title">Níveis de dificuldade</p>
+        <ul class="legend">
+          <li><span class="difficulty is-facil">Fácil <span aria-hidden="true">●○○</span></span></li>
+          <li><span class="difficulty is-medio">Médio <span aria-hidden="true">●●○</span></span></li>
+          <li><span class="difficulty is-dificil">Difícil <span aria-hidden="true">●●●</span></span></li>
+        </ul>
+
+        <div class="field">
+          <label class="field-label" for="player-name">Seu nome</label>
+          <input id="player-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Como devemos te chamar?" aria-describedby="name-hint">
+          <p id="name-hint" class="hint">Digite seu nome para começar.</p>
+        </div>
+        <button id="start-btn" class="btn btn-primary btn-block" type="button" disabled>Começar</button>
+      </div>
+    </section>
+
+    <!-- Carregando -->
+    <section id="screen-loading" class="screen" aria-live="polite" hidden>
+      <div class="card"><p class="muted">Carregando perguntas…</p></div>
+    </section>
+
+    <!-- Erro ao carregar -->
+    <section id="screen-error" class="screen" hidden>
+      <div class="card">
+        <h2 class="card-title">Não foi possível carregar o quiz</h2>
+        <p class="muted" id="error-message"></p>
+        <button id="retry-btn" class="btn btn-primary btn-block" type="button">Tentar novamente</button>
+      </div>
+    </section>
+
+    <!-- Pergunta -->
+    <section id="screen-quiz" class="screen" hidden>
+      <article class="card">
+        <div class="quiz-meta">
+          <span id="progress-text" class="progress-text">Pergunta 1 de 10</span>
+          <span class="score-chip">Pontos: <strong id="total-score">0</strong></span>
+        </div>
+        <div id="progress" class="progress" role="progressbar" aria-label="Progresso do quiz" aria-valuemin="0" aria-valuemax="10" aria-valuenow="1">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <div class="timer" id="timer">
+          <div class="timer-row">
+            <span class="timer-time">Tempo: <strong id="timer-value">50</strong>s</span>
+            <span class="timer-worth">Valendo agora: <strong id="timer-points">10</strong> pts</span>
+          </div>
+          <div class="timer-track" aria-hidden="true">
+            <div id="timer-bar" class="timer-bar"></div>
+          </div>
+        </div>
+
+        <div class="tags">
+          <span id="difficulty" class="difficulty" hidden></span>
+          <span id="bonus" class="bonus" hidden>★ Bônus</span>
+          <span id="category" class="pill"></span>
+        </div>
+        <h2 id="question-text" class="question-text" tabindex="-1"></h2>
+
+        <div id="options" class="options" role="group" aria-labelledby="question-text"></div>
+
+        <div id="feedback" class="feedback" role="status" aria-live="polite" hidden>
+          <p id="feedback-title" class="feedback-title"></p>
+          <p id="feedback-answer" class="feedback-answer" hidden></p>
+          <p id="feedback-explanation" class="feedback-text" hidden><strong>Você sabia?</strong> <span id="feedback-text"></span></p>
+          <p id="source" class="source" hidden>Fonte: <a id="source-link" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+        </div>
+
+        <div class="card-footer">
+          <span class="muted">Pontos nesta pergunta: <strong id="question-points">–</strong></span>
+          <button id="action-btn" class="btn btn-primary btn-block" type="button" disabled>Confirmar resposta</button>
+          <button id="end-btn" class="btn btn-secondary btn-block" type="button">Encerrar agora</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- Resultado + ranking da sessão (RQ03, RQ04, RQ05) -->
+    <section id="screen-result" class="screen" hidden aria-labelledby="result-title">
+      <div class="card">
+        <h2 id="result-title" class="card-title" tabindex="-1">Fim de jogo!</h2>
+        <p id="result-message" class="result-message"></p>
+        <p class="result-score"><strong id="result-score">0</strong><span class="muted"> / <span id="result-max">0</span> pontos</span></p>
+
+        <dl class="result-grid">
+          <div><dt>Acertos</dt><dd id="result-correct">0</dd></div>
+          <div><dt>Erros</dt><dd id="result-wrong">0</dd></div>
+          <div><dt>Respondidas</dt><dd id="result-answered">0</dd></div>
+          <div><dt>Sem resposta (tempo)</dt><dd id="result-timeouts">0</dd></div>
+        </dl>
+
+        <h3 id="ranking-title" class="ranking-title">Ranking</h3>
+        <p id="ranking-status" class="muted" role="status" aria-live="polite"></p>
+        <ol id="ranking-list" class="ranking-list"></ol>
+
+        <button id="restart-btn" class="btn btn-primary btn-block" type="button">Jogar novamente</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Ordem importa: config.js e questions.js definem o que script.js usa -->
+  <script src="js/config.js"></script>
+  <script src="js/questions.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
