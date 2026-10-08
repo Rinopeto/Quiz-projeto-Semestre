@@ -46,8 +46,11 @@ devclash/
 
 ## Acessibilidade
 
-Tudo é operável por teclado (Tab, Enter e Espaço), o foco fica visível e é movido a cada etapa, e acerto, erro, seleção, dificuldade e posição no ranking sempre aparecem também em texto ou símbolo, nunca só por cor.
+Acessibilidade
 
+Leitura em voz alta (baixa visão): no topo da página, o botão "Leitura em voz alta" liga a leitura automática de cada pergunta (com a dificuldade e as alternativas), da alternativa selecionada, da resposta com a explicação e a fonte, e do resultado final. "Ler novamente" repete a tela atual (e vira "Parar leitura" enquanto fala), a tecla Esc interrompe e a velocidade pode ser lenta, normal ou rápida. A preferência fica salva no navegador. Usa a voz em português do próprio navegador (Web Speech API), sem biblioteca e sem internet; a qualidade da voz depende do navegador e do sistema. Quem já usa um leitor de tela (NVDA, VoiceOver) pode deixar essa opção desligada para não ouvir duas vozes.
+
+Tudo é operável por teclado (Tab, Enter e Espaço), o foco fica visível e é movido a cada etapa, e acerto, erro, seleção, dificuldade e posição no ranking sempre aparecem também em texto ou símbolo, nunca só por cor.
 ## Adicionar perguntas
 
 Local: inclua objetos em `LOCAL_QUESTIONS`, em `js/questions.js`, com `question`, `options`, `correctAnswer` (índice), `difficulty` (`facil`, `medio` ou `dificil`), `bonus` (opcional, `true` nas bônus), `category`, `explanation`, `sourceName` e `sourceUrl`. Trechos entre crases viram código. Com backend: edite `backend/seed.sql` e rode `npm run db:init`.
