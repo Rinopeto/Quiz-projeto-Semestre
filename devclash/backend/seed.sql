@@ -1,5 +1,5 @@
 -- Dados iniciais (gerados a partir de js/questions.js). Pode ser executado mais de uma vez:
--- atualiza as perguntas de mesmo id e recria as suas alternativas.
+-- atualiza as perguntas de mesmo id, recria as suas alternativas e desativa as que saíram do questions.js.
 
 INSERT INTO categories (name) VALUES
   ('Modelagem e DDL'),
@@ -322,34 +322,6 @@ INSERT INTO options (question_id, position, text, is_correct) VALUES
 
 INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
 VALUES (
-  12,
-  (SELECT id FROM categories WHERE name = 'Fundamentos de SQL'),
-  'Qual comando SQL insere uma nova linha em uma tabela?',
-  '`INSERT INTO` adiciona novas linhas a uma tabela, por exemplo `INSERT INTO clientes (nome) VALUES (''Ana'')`. Para alterar linhas que já existem usa-se o `UPDATE`.',
-  'Documentação do PostgreSQL: Inserting Data',
-  'https://www.postgresql.org/docs/current/dml-insert.html',
-  'facil',
-  FALSE
-)
-ON CONFLICT (id) DO UPDATE SET
-  category_id = EXCLUDED.category_id,
-  statement   = EXCLUDED.statement,
-  explanation = EXCLUDED.explanation,
-  source_name = EXCLUDED.source_name,
-  source_url  = EXCLUDED.source_url,
-  difficulty  = EXCLUDED.difficulty,
-  is_bonus    = EXCLUDED.is_bonus,
-  active      = TRUE;
-
-DELETE FROM options WHERE question_id = 12;
-INSERT INTO options (question_id, position, text, is_correct) VALUES
-  (12, 0, '`ADD ROW`', false),
-  (12, 1, '`INSERT INTO`', true),
-  (12, 2, '`APPEND`', false),
-  (12, 3, '`CREATE ROW`', false);
-
-INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
-VALUES (
   13,
   (SELECT id FROM categories WHERE name = 'Consultas SQL'),
   'Qual cláusula ordena as linhas do resultado de uma consulta?',
@@ -375,34 +347,6 @@ INSERT INTO options (question_id, position, text, is_correct) VALUES
   (13, 1, '`SORT BY`', false),
   (13, 2, '`ORDER BY`', true),
   (13, 3, '`ARRANGE BY`', false);
-
-INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
-VALUES (
-  14,
-  (SELECT id FROM categories WHERE name = 'Fundamentos de SQL'),
-  'Qual comando altera os valores de linhas que já existem em uma tabela?',
-  '`UPDATE` modifica valores de linhas existentes e normalmente vem com `WHERE` para escolher quais linhas mudar. Sem `WHERE`, todas as linhas da tabela são alteradas. O `ALTER` muda a estrutura (como colunas), não os dados.',
-  'Documentação do PostgreSQL: Updating Data',
-  'https://www.postgresql.org/docs/current/dml-update.html',
-  'facil',
-  FALSE
-)
-ON CONFLICT (id) DO UPDATE SET
-  category_id = EXCLUDED.category_id,
-  statement   = EXCLUDED.statement,
-  explanation = EXCLUDED.explanation,
-  source_name = EXCLUDED.source_name,
-  source_url  = EXCLUDED.source_url,
-  difficulty  = EXCLUDED.difficulty,
-  is_bonus    = EXCLUDED.is_bonus,
-  active      = TRUE;
-
-DELETE FROM options WHERE question_id = 14;
-INSERT INTO options (question_id, position, text, is_correct) VALUES
-  (14, 0, '`MODIFY`', false),
-  (14, 1, '`CHANGE`', false),
-  (14, 2, '`UPDATE`', true),
-  (14, 3, '`ALTER`', false);
 
 INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
 VALUES (
@@ -686,34 +630,6 @@ INSERT INTO options (question_id, position, text, is_correct) VALUES
 
 INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
 VALUES (
-  25,
-  (SELECT id FROM categories WHERE name = 'Modelagem e DDL'),
-  'Qual comando esvazia uma tabela inteira de forma rápida, sem aceitar cláusula `WHERE`?',
-  '`TRUNCATE` remove todas as linhas de uma vez, sem percorrê-las uma a uma, e por isso é bem mais rápido que um `DELETE` sem `WHERE` em tabelas grandes. A estrutura da tabela é mantida. O `DELETE` aceita `WHERE`, e o `DROP TABLE` apaga a tabela inteira.',
-  'Documentação do PostgreSQL: TRUNCATE',
-  'https://www.postgresql.org/docs/current/sql-truncate.html',
-  'medio',
-  FALSE
-)
-ON CONFLICT (id) DO UPDATE SET
-  category_id = EXCLUDED.category_id,
-  statement   = EXCLUDED.statement,
-  explanation = EXCLUDED.explanation,
-  source_name = EXCLUDED.source_name,
-  source_url  = EXCLUDED.source_url,
-  difficulty  = EXCLUDED.difficulty,
-  is_bonus    = EXCLUDED.is_bonus,
-  active      = TRUE;
-
-DELETE FROM options WHERE question_id = 25;
-INSERT INTO options (question_id, position, text, is_correct) VALUES
-  (25, 0, '`TRUNCATE`', true),
-  (25, 1, '`DROP TABLE`', false),
-  (25, 2, '`DELETE`', false),
-  (25, 3, '`VACUUM`', false);
-
-INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
-VALUES (
   26,
   (SELECT id FROM categories WHERE name = 'Modelagem e DDL'),
   'O que é uma `VIEW` em um banco de dados relacional?',
@@ -879,62 +795,6 @@ INSERT INTO options (question_id, position, text, is_correct) VALUES
   (31, 1, '`text`', false),
   (31, 2, '`jsonb`', true),
   (31, 3, '`xml`', false);
-
-INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
-VALUES (
-  32,
-  (SELECT id FROM categories WHERE name = 'Consultas SQL'),
-  'Qual operador do PostgreSQL faz busca por padrão ignorando a diferença entre maiúsculas e minúsculas?',
-  '`ILIKE` funciona como o `LIKE`, mas sem diferenciar maiúsculas de minúsculas, por exemplo `nome ILIKE ''ana%''`. É uma extensão do PostgreSQL. O `LIKE` diferencia maiúsculas de minúsculas.',
-  'Documentação do PostgreSQL: Pattern Matching',
-  'https://www.postgresql.org/docs/current/functions-matching.html',
-  'medio',
-  FALSE
-)
-ON CONFLICT (id) DO UPDATE SET
-  category_id = EXCLUDED.category_id,
-  statement   = EXCLUDED.statement,
-  explanation = EXCLUDED.explanation,
-  source_name = EXCLUDED.source_name,
-  source_url  = EXCLUDED.source_url,
-  difficulty  = EXCLUDED.difficulty,
-  is_bonus    = EXCLUDED.is_bonus,
-  active      = TRUE;
-
-DELETE FROM options WHERE question_id = 32;
-INSERT INTO options (question_id, position, text, is_correct) VALUES
-  (32, 0, '`LIKE`', false),
-  (32, 1, '`ILIKE`', true),
-  (32, 2, '`SIMILAR`', false),
-  (32, 3, '`MATCHES`', false);
-
-INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
-VALUES (
-  33,
-  (SELECT id FROM categories WHERE name = 'Desempenho'),
-  'Qual tipo de índice do PostgreSQL é indicado para colunas `jsonb` e arrays, em buscas do tipo ''contém''?',
-  'O GIN (Generalized Inverted Index) indexa valores compostos, como arrays e `jsonb`, e atende bem a operadores como `@>` (contém). O B-tree é o padrão para comparações simples, o Hash serve para igualdade e o BRIN para tabelas enormes com dados em ordem física.',
-  'Documentação do PostgreSQL: Index Types',
-  'https://www.postgresql.org/docs/current/indexes-types.html',
-  'dificil',
-  FALSE
-)
-ON CONFLICT (id) DO UPDATE SET
-  category_id = EXCLUDED.category_id,
-  statement   = EXCLUDED.statement,
-  explanation = EXCLUDED.explanation,
-  source_name = EXCLUDED.source_name,
-  source_url  = EXCLUDED.source_url,
-  difficulty  = EXCLUDED.difficulty,
-  is_bonus    = EXCLUDED.is_bonus,
-  active      = TRUE;
-
-DELETE FROM options WHERE question_id = 33;
-INSERT INTO options (question_id, position, text, is_correct) VALUES
-  (33, 0, 'B-tree', false),
-  (33, 1, 'Hash', false),
-  (33, 2, 'BRIN', false),
-  (33, 3, 'GIN', true);
 
 INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
 VALUES (
@@ -1269,6 +1129,149 @@ INSERT INTO options (question_id, position, text, is_correct) VALUES
   (45, 1, 'ILOVEYOU', false),
   (45, 2, 'Creeper', true),
   (45, 3, 'WannaCry', false);
+
+INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
+VALUES (
+  46,
+  (SELECT id FROM categories WHERE name = 'História da tecnologia'),
+  'Em que ano Linus Torvalds anunciou e lançou a primeira versão do kernel Linux?',
+  'Em agosto de 1991, o estudante finlandês Linus Torvalds anunciou que estava criando um novo sistema operacional, e a primeira versão do kernel foi lançada em setembro daquele ano. O ano de 1983 é o do anúncio do projeto GNU, de Richard Stallman.',
+  'Wikipedia: Linux',
+  'https://en.wikipedia.org/wiki/Linux',
+  'facil',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  statement   = EXCLUDED.statement,
+  explanation = EXCLUDED.explanation,
+  source_name = EXCLUDED.source_name,
+  source_url  = EXCLUDED.source_url,
+  difficulty  = EXCLUDED.difficulty,
+  is_bonus    = EXCLUDED.is_bonus,
+  active      = TRUE;
+
+DELETE FROM options WHERE question_id = 46;
+INSERT INTO options (question_id, position, text, is_correct) VALUES
+  (46, 0, '1983', false),
+  (46, 1, '1995', false),
+  (46, 2, '2001', false),
+  (46, 3, '1991', true);
+
+INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
+VALUES (
+  47,
+  (SELECT id FROM categories WHERE name = 'História da tecnologia'),
+  'Qual rede de computadores, financiada pelo Departamento de Defesa dos EUA, é considerada a precursora da internet?',
+  'A ARPANET, financiada pela agência ARPA do Departamento de Defesa dos EUA, enviou sua primeira mensagem em 1969 e é considerada a precursora da internet. Ethernet, Bluetooth e Wi-Fi são tecnologias de conexão, não a rede que deu origem à internet.',
+  'Wikipedia: ARPANET',
+  'https://en.wikipedia.org/wiki/ARPANET',
+  'medio',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  statement   = EXCLUDED.statement,
+  explanation = EXCLUDED.explanation,
+  source_name = EXCLUDED.source_name,
+  source_url  = EXCLUDED.source_url,
+  difficulty  = EXCLUDED.difficulty,
+  is_bonus    = EXCLUDED.is_bonus,
+  active      = TRUE;
+
+DELETE FROM options WHERE question_id = 47;
+INSERT INTO options (question_id, position, text, is_correct) VALUES
+  (47, 0, 'Ethernet', false),
+  (47, 1, 'ARPANET', true),
+  (47, 2, 'Bluetooth', false),
+  (47, 3, 'Wi-Fi', false);
+
+INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
+VALUES (
+  48,
+  (SELECT id FROM categories WHERE name = 'História da tecnologia'),
+  'Quem propôs o modelo relacional de banco de dados, em um artigo de 1970 enquanto trabalhava na IBM?',
+  'Edgar F. Codd, pesquisador da IBM, publicou em 1970 o artigo que propôs o modelo relacional, base dos bancos de dados SQL. Charles Bachman ficou conhecido pelo modelo de rede, Michael Stonebraker criou o Ingres e o POSTGRES (origem do PostgreSQL) e Larry Ellison cofundou a Oracle.',
+  'Wikipedia: Edgar F. Codd',
+  'https://en.wikipedia.org/wiki/Edgar_F._Codd',
+  'medio',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  statement   = EXCLUDED.statement,
+  explanation = EXCLUDED.explanation,
+  source_name = EXCLUDED.source_name,
+  source_url  = EXCLUDED.source_url,
+  difficulty  = EXCLUDED.difficulty,
+  is_bonus    = EXCLUDED.is_bonus,
+  active      = TRUE;
+
+DELETE FROM options WHERE question_id = 48;
+INSERT INTO options (question_id, position, text, is_correct) VALUES
+  (48, 0, 'Charles Bachman', false),
+  (48, 1, 'Michael Stonebraker', false),
+  (48, 2, 'Edgar F. Codd', true),
+  (48, 3, 'Larry Ellison', false);
+
+INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
+VALUES (
+  49,
+  (SELECT id FROM categories WHERE name = 'História da tecnologia'),
+  'Qual navegador, lançado em 1993 pelo NCSA, ajudou a popularizar a Web por ter interface gráfica e mostrar imagens junto com o texto?',
+  'O NCSA Mosaic foi criado por Marc Andreessen e Eric Bina, e o seu lançamento em 1993 popularizou a Web graças à interface gráfica e às imagens exibidas junto com o texto. O Netscape Navigator veio em 1994, o Internet Explorer em 1995 e o Firefox em 2004.',
+  'Wikipedia: NCSA Mosaic',
+  'https://en.wikipedia.org/wiki/NCSA_Mosaic',
+  'dificil',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  statement   = EXCLUDED.statement,
+  explanation = EXCLUDED.explanation,
+  source_name = EXCLUDED.source_name,
+  source_url  = EXCLUDED.source_url,
+  difficulty  = EXCLUDED.difficulty,
+  is_bonus    = EXCLUDED.is_bonus,
+  active      = TRUE;
+
+DELETE FROM options WHERE question_id = 49;
+INSERT INTO options (question_id, position, text, is_correct) VALUES
+  (49, 0, 'Mosaic', true),
+  (49, 1, 'Netscape Navigator', false),
+  (49, 2, 'Internet Explorer', false),
+  (49, 3, 'Firefox', false);
+
+INSERT INTO questions (id, category_id, statement, explanation, source_name, source_url, difficulty, is_bonus)
+VALUES (
+  50,
+  (SELECT id FROM categories WHERE name = 'História da tecnologia'),
+  'Qual linguagem de programação, criada por uma equipe da IBM liderada por John Backus e lançada em 1957, foi uma das primeiras linguagens de alto nível amplamente usadas?',
+  'O FORTRAN (Formula Translation), desenvolvido por uma equipe da IBM liderada por John Backus, teve o seu primeiro compilador entregue em 1957 e foi muito usado em computação científica. O COBOL surgiu em 1959, o BASIC em 1964 e o Pascal em 1970.',
+  'Wikipedia: Fortran',
+  'https://en.wikipedia.org/wiki/Fortran',
+  'dificil',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  statement   = EXCLUDED.statement,
+  explanation = EXCLUDED.explanation,
+  source_name = EXCLUDED.source_name,
+  source_url  = EXCLUDED.source_url,
+  difficulty  = EXCLUDED.difficulty,
+  is_bonus    = EXCLUDED.is_bonus,
+  active      = TRUE;
+
+DELETE FROM options WHERE question_id = 50;
+INSERT INTO options (question_id, position, text, is_correct) VALUES
+  (50, 0, 'COBOL', false),
+  (50, 1, 'BASIC', false),
+  (50, 2, 'Pascal', false),
+  (50, 3, 'FORTRAN', true);
+
+-- Perguntas que não estão mais no questions.js ficam inativas (não somem, para manter o histórico das partidas).
+UPDATE questions SET active = FALSE WHERE id NOT IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50);
 
 -- Mantém a sequência de ids alinhada com os ids inseridos manualmente.
 SELECT setval(pg_get_serial_sequence('questions', 'id'), (SELECT MAX(id) FROM questions));
