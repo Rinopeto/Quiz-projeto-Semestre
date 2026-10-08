@@ -249,6 +249,13 @@ code {
 .ranking-list li.is-you .rank-pos { color: var(--primary); }
 .ranking-list li.rank-gap { justify-content: center; color: var(--muted); }
 
+/* Acessibilidade: leitura em voz alta */
+.a11y-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
+.btn-small { padding: 10px 14px; font-size: 0.85rem; }
+.btn-secondary[aria-pressed="true"] { background: var(--primary-light); border: 2px solid var(--primary); padding: 9px 13px; }
+.tts-rate { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; }
+.tts-rate select { font: inherit; font-size: 0.85rem; padding: 9px 8px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+
 /* Telas pequenas */
 @media (max-width: 480px) {
   .app { padding: 16px 12px 40px; }
