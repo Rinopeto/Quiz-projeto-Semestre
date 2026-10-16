@@ -8,9 +8,7 @@ const CONFIG = {
   WARNING_SECONDS: 10,
   MAX_POINTS_PER_QUESTION: 10,
   WRONG_ANSWER_POINTS: 1, // resposta errada vale 1 ponto; tempo esgotado vale 0
-  QUESTIONS_PER_GAME: 0, // quantas perguntas NORMAIS entram na partida (0 = todas)
-  BONUS_PER_GAME: 0, // quantas perguntas BÔNUS entram, sempre depois das normais (0 = todas)
-  API_QUESTIONS_LIMIT: 50, // quantas perguntas pedir à API (máximo aceito por GET /api/questions)
+  QUESTIONS_PER_GAME: 10, // quantas perguntas sorteadas por partida (0 = todas)
   SORT_BY_DIFFICULTY: true, // dentro da partida, vai do fácil ao difícil (a ordem é sorteada dentro de cada nível)
   SHUFFLE_OPTIONS: true, // embaralha a ordem das alternativas
   RANKING_LIMIT: 10,
@@ -65,23 +63,13 @@ function shuffle(array) {
 // Sorteia as perguntas da partida e embaralha as alternativas.
 // Cada alternativa guarda seu índice original, então embaralhar não afeta correctAnswer.
 function prepareQuestions(rawQuestions) {
-  const levelOf = (q) => (DIFFICULTIES[q.difficulty] ? DIFFICULTIES[q.difficulty].level : 2);
-
-  // Embaralha, limita (se configurado) e ordena do fácil ao difícil.
-  const arrange = (list, max) => {
-    const picked = shuffle(list);
-    const limited = max ? picked.slice(0, max) : picked;
-    if (CONFIG.SORT_BY_DIFFICULTY) {
-      limited.sort((a, b) => levelOf(a) - levelOf(b)); // sort estável: mantém o sorteio dentro de cada nível
-    }
-    return limited;
-  };
-
-  // As perguntas bônus vêm sempre depois das normais.
-  const regular = arrange(rawQuestions.filter((q) => !q.bonus), CONFIG.QUESTIONS_PER_GAME);
-  const bonus = arrange(rawQuestions.filter((q) => q.bonus), CONFIG.BONUS_PER_GAME);
-
-  return [...regular, ...bonus].map((q) => {
+  const picked = shuffle(rawQuestions);
+  const limited = CONFIG.QUESTIONS_PER_GAME ? picked.slice(0, CONFIG.QUESTIONS_PER_GAME) : picked;
+  if (CONFIG.SORT_BY_DIFFICULTY) {
+    const levelOf = (q) => (DIFFICULTIES[q.difficulty] ? DIFFICULTIES[q.difficulty].level : 2);
+    limited.sort((a, b) => levelOf(a) - levelOf(b)); // sort estável: mantém o sorteio dentro de cada nível
+  }
+  return limited.map((q) => {
     const options = q.options.map((text, originalIndex) => ({ text, originalIndex }));
     return { ...q, options: CONFIG.SHUFFLE_OPTIONS ? shuffle(options) : options };
   });
@@ -100,51 +88,18 @@ function buildMatchPayload() {
   };
 }
 
-// fetch com tempo limite (a API gratuita pode demorar a "acordar").
-async function fetchWithTimeout(url, options = {}, ms = 20000) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// Envia a partida ao backend e devolve { id }. Sem API configurada, apenas registra no console.
+// Envia a partida ao backend. Sem API configurada, apenas registra no console.
 async function saveMatch(payload) {
   if (!API_BASE_URL) {
     console.info("[devclash] Partida finalizada (sem API configurada):", payload);
-    return null;
+    return;
   }
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/matches`, {
+  const response = await fetch(`${API_BASE_URL}/api/matches`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
-
-// Busca o ranking geral no banco (top N + a linha da partida recém-salva, se matchId).
-async function fetchRanking(matchId, limit) {
-  const query = new URLSearchParams({ limit: String(limit) });
-  if (matchId) query.set("matchId", String(matchId));
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/ranking?${query}`);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const data = await response.json();
-  if (!Array.isArray(data)) throw new Error("Resposta inválida do ranking");
-  return data;
-}
-
-// Insere "..." onde há salto de posições (ex.: top 10 e depois a linha do jogador).
-function withGaps(rows) {
-  const out = [];
-  rows.forEach((row, i) => {
-    if (i > 0 && row.position > rows[i - 1].position + 1) out.push({ gap: true });
-    out.push(row);
-  });
-  return out;
 }
 
 /*
@@ -254,185 +209,15 @@ const timer = {
 };
 
 /* =========================================================
- * Leitura em voz alta (acessibilidade para baixa visão)
- * Usa a Web Speech API do navegador (speechSynthesis): não precisa de biblioteca nem de internet.
- * ========================================================= */
-const speech = {
-  STORAGE_KEY: "devclash:voz",
-  RATES: [0.8, 1, 1.3],
-  supported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
-  enabled: false, // leitura automática de cada pergunta, resposta e resultado
-  rate: 1,
-  voice: null,
-  pending: 0, // pedaços de fala ainda na fila
-  generation: 0, // identifica a fala atual (ignora eventos de falas canceladas)
-  lastText: "", // texto da tela atual, usado por "Ler novamente"
-  onChange: null,
-
-  load() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(this.STORAGE_KEY));
-      if (saved) {
-        this.enabled = saved.enabled === true;
-        if (this.RATES.includes(saved.rate)) this.rate = saved.rate;
-      }
-    } catch (err) {
-      // sem localStorage: usa os padrões
-    }
-  },
-
-  save() {
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify({ enabled: this.enabled, rate: this.rate }));
-    } catch (err) {
-      // sem localStorage: a preferência vale só nesta visita
-    }
-  },
-
-  pickVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    this.voice =
-      voices.find((v) => v.lang === "pt-BR") ||
-      voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("pt")) ||
-      null;
-  },
-
-  init() {
-    if (!this.supported) return;
-    this.load();
-    this.pickVoice();
-    if (typeof window.speechSynthesis.addEventListener === "function") {
-      window.speechSynthesis.addEventListener("voiceschanged", () => this.pickVoice());
-    }
-  },
-
-  notify() {
-    if (this.onChange) this.onChange();
-  },
-
-  // Quebra o texto em frases curtas: alguns navegadores interrompem falas muito longas.
-  chunks(text) {
-    const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
-    const out = [];
-    sentences.forEach((sentence) => {
-      let rest = sentence.trim();
-      while (rest.length > 200) {
-        let cut = rest.lastIndexOf(",", 200);
-        if (cut < 60) cut = rest.lastIndexOf(" ", 200);
-        if (cut < 1) cut = 200;
-        out.push(rest.slice(0, cut + 1).trim());
-        rest = rest.slice(cut + 1).trim();
-      }
-      if (rest) out.push(rest);
-    });
-    return out;
-  },
-
-  speak(text) {
-    if (!this.supported || !text) return;
-    this.stop();
-    const generation = this.generation;
-    const parts = this.chunks(text);
-    this.pending = parts.length;
-    this.notify();
-    // Pequena pausa depois do cancel(): evita que alguns navegadores descartem a fala nova.
-    setTimeout(() => {
-      if (generation !== this.generation) return;
-      parts.forEach((part) => {
-        const utterance = new SpeechSynthesisUtterance(part);
-        utterance.lang = "pt-BR";
-        if (this.voice) utterance.voice = this.voice;
-        utterance.rate = this.rate;
-        const done = () => {
-          if (generation !== this.generation) return;
-          this.pending = Math.max(0, this.pending - 1);
-          this.notify();
-        };
-        utterance.onend = done;
-        utterance.onerror = done;
-        window.speechSynthesis.speak(utterance);
-      });
-    }, 60);
-  },
-
-  stop() {
-    this.generation++;
-    this.pending = 0;
-    if (this.supported) window.speechSynthesis.cancel();
-    this.notify();
-  },
-
-  // Guarda o texto da tela (para "Ler novamente") e, com a leitura ligada, fala na hora.
-  announce(text) {
-    this.lastText = text;
-    if (this.enabled) this.speak(text);
-  }
-};
-
-// Troca símbolos de código por palavras, para a voz não "engasgar" (ex.: "NULL = NULL").
-function codeToSpeech(code) {
-  return code
-    .replace(/<>/g, " diferente de ")
-    .replace(/>=/g, " maior ou igual a ")
-    .replace(/<=/g, " menor ou igual a ")
-    .replace(/=/g, " igual a ")
-    .replace(/>/g, " maior que ")
-    .replace(/</g, " menor que ")
-    .replace(/\*/g, " asterisco ")
-    .replace(/_/g, " ");
-}
-
-// Prepara um texto do quiz para ser falado: trechos entre crases viram palavras e símbolos de enfeite somem.
-function toSpeech(text) {
-  return String(text)
-    .split("`")
-    .map((part, i) => (i % 2 === 1 ? codeToSpeech(part) : part))
-    .join("")
-    .replace(/[✓✗⏰⚠★●○]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function speechForStart() {
-  return "DevClash. Pronto para o desafio? Responda perguntas de SQL e bancos de dados, uma por vez. Digite seu nome e aperte o botão Começar.";
-}
-
-function speechForQuestion(question, index, total) {
-  const info = DIFFICULTIES[question.difficulty];
-  const parts = [`Pergunta ${index + 1} de ${total}.`];
-  if (question.bonus) parts.push("Pergunta bônus.");
-  if (info) parts.push(`Dificuldade: ${info.label}.`);
-  parts.push(question.question);
-  question.options.forEach((opt, i) => {
-    parts.push(`Alternativa ${CONFIG.OPTION_LABELS[i] || i + 1}: ${opt.text}.`);
-  });
-  return toSpeech(parts.join(" "));
-}
-
-function speechForFeedback(question, status, points, correctText) {
-  const parts = [];
-  if (status === "correct") parts.push(`Resposta correta! ${pluralPoints(points)}.`);
-  else if (status === "incorrect") parts.push(`Resposta incorreta. ${pluralPoints(points)} por tentar.`);
-  else parts.push("Tempo esgotado. Zero pontos.");
-  if (status !== "correct") parts.push(`A resposta certa é: ${correctText}.`);
-  if (question.explanation) parts.push(`Você sabia? ${question.explanation}`);
-  if (question.sourceName) parts.push(`Fonte: ${question.sourceName}.`);
-  return toSpeech(parts.join(" "));
-}
-
-function speechForResult(summary) {
-  return toSpeech(
-    `Fim de jogo. ${getEndMessage(summary, state.playerName)} ` +
-      `Você fez ${state.totalScore} de ${summary.maxScore} pontos. ` +
-      `Acertos: ${summary.correct}. Erros: ${summary.wrong}. Sem resposta por tempo: ${summary.timeouts}. ` +
-      "O ranking está logo abaixo."
-  );
-}
-
-/* =========================================================
  * Interface (única camada que toca o DOM)
  * ========================================================= */
 const $ = (id) => document.getElementById(id);
+
+// Claudinho, o mascote (js/mascot.js). Se o arquivo não carregar, o quiz continua sem ele.
+const mascot = typeof claudinho !== "undefined"
+  ? claudinho
+  : { onScreen() {}, onQuestion() {}, onTimeWarning() {}, onAnswer() {}, onResult() {} };
+
 const ui = {
   screens: {
     start: $("screen-start"),
@@ -470,21 +255,15 @@ const ui = {
   actionBtn: $("action-btn"),
   resultTitle: $("result-title"),
   rankingList: $("ranking-list"),
-  rankingTitle: $("ranking-title"),
-  rankingStatus: $("ranking-status"),
   restartBtn: $("restart-btn"),
-  endBtn: $("end-btn"),
-  ttsToggle: $("tts-toggle"),
-  ttsRepeat: $("tts-repeat"),
-  ttsRate: $("tts-rate"),
-  ttsRateLabel: $("tts-rate-label"),
-  ttsUnsupported: $("tts-unsupported")
+  endBtn: $("end-btn")
 };
 
 function showScreen(name) {
   Object.entries(ui.screens).forEach(([key, el]) => {
     el.hidden = key !== name;
   });
+  mascot.onScreen(name, state.playerName);
 }
 
 // Mostra texto simples e, entre crases (`assim`), trechos de código. Usa só textContent (seguro contra HTML).
@@ -527,24 +306,6 @@ function renderProgress(index, total) {
   ui.progress.setAttribute("aria-valuenow", index + 1);
 }
 
-// Atualiza os botões de leitura em voz alta (texto sempre diz o estado, não só a cor).
-function renderTtsControls() {
-  if (!speech.supported) {
-    ui.ttsToggle.hidden = true;
-    ui.ttsRepeat.hidden = true;
-    ui.ttsRateLabel.hidden = true;
-    ui.ttsUnsupported.hidden = false;
-    return;
-  }
-  const icon = document.createElement("span");
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = "🔊 ";
-  ui.ttsToggle.replaceChildren(icon, document.createTextNode(`Leitura em voz alta: ${speech.enabled ? "ligada" : "desligada"}`));
-  ui.ttsToggle.setAttribute("aria-pressed", String(speech.enabled));
-  ui.ttsRepeat.textContent = speech.pending > 0 ? "Parar leitura" : "Ler novamente";
-  ui.ttsRate.value = String(speech.rate);
-}
-
 function renderQuestion(question, index, total) {
   renderProgress(index, total);
   ui.totalScore.textContent = state.totalScore;
@@ -581,14 +342,15 @@ function renderQuestion(question, index, total) {
   });
 
   ui.questionText.focus({ preventScroll: true }); // leitor de tela anuncia a nova pergunta
-  speech.announce(speechForQuestion(question, index, total));
 }
 
 function renderTimer(secondsLeft) {
   ui.timerValue.textContent = Math.ceil(secondsLeft);
   ui.timerPoints.textContent = calculatePoints(secondsLeft);
   ui.timerBar.style.width = `${(secondsLeft / CONFIG.SECONDS_PER_QUESTION) * 100}%`;
-  ui.timer.classList.toggle("is-warning", secondsLeft > 0 && secondsLeft <= CONFIG.WARNING_SECONDS);
+  const warning = secondsLeft > 0 && secondsLeft <= CONFIG.WARNING_SECONDS;
+  ui.timer.classList.toggle("is-warning", warning);
+  if (warning) mascot.onTimeWarning();
 }
 
 function renderSelection(originalIndex) {
@@ -653,7 +415,7 @@ function renderAnswerResult(question, selectedIndex, status, points) {
   ui.actionBtn.textContent = isLast ? "Ver resultado" : "Próxima pergunta";
   ui.actionBtn.disabled = false;
   ui.actionBtn.focus({ preventScroll: true }); // as alternativas foram desabilitadas; mantém o foco no fluxo
-  speech.announce(speechForFeedback(question, status, points, correctText));
+  mascot.onAnswer(status, points);
 }
 
 function renderRanking(rows) {
@@ -681,8 +443,7 @@ function renderRanking(rows) {
 
       const points = document.createElement("span");
       points.className = "rank-points";
-      points.textContent =
-        typeof row.totalTime === "number" ? `${row.points} pts · ${row.totalTime.toFixed(1)} s` : `${row.points} pts`;
+      points.textContent = `${row.points} pts`;
 
       li.append(pos, name, points);
     }
@@ -712,6 +473,7 @@ function loadQuestion() {
   state.status = "answering";
   state.selectedOption = null;
   renderQuestion(question, state.currentIndex, state.questions.length);
+  mascot.onQuestion(question, state.currentIndex, state.questions.length);
   timer.start(CONFIG.SECONDS_PER_QUESTION, renderTimer, handleTimeout);
 }
 
@@ -732,13 +494,6 @@ function selectOption(originalIndex) {
   if (state.status !== "answering") return;
   state.selectedOption = originalIndex;
   renderSelection(originalIndex);
-
-  if (speech.enabled) {
-    const question = currentQuestion();
-    const position = question.options.findIndex((o) => o.originalIndex === originalIndex);
-    const label = CONFIG.OPTION_LABELS[position] || position + 1;
-    speech.speak(toSpeech(`Selecionada: alternativa ${label}: ${question.options[position].text}.`));
-  }
 }
 
 function confirmAnswer() {
@@ -777,21 +532,15 @@ function nextQuestion() {
 function finishQuiz() {
   timer.stop();
   state.status = "idle";
-  const summary = getSummary();
-  renderResult(summary);
-  speech.announce(speechForResult(summary));
+  renderResult(getSummary());
+  showRanking();
   showScreen("result");
+  mascot.onResult(getSummary());
   ui.resultTitle.focus({ preventScroll: true });
-  showRanking(buildMatchPayload());
+  saveMatch(buildMatchPayload()).catch((err) => console.warn("[devclash] Não foi possível salvar a partida:", err));
 }
 
-function setRankingInfo(title, status) {
-  ui.rankingTitle.textContent = title;
-  ui.rankingStatus.textContent = status;
-}
-
-// Ranking só da sessão do navegador (usado sem API ou quando a API falha).
-function showSessionRanking() {
+function showRanking() {
   const entry = { name: state.playerName, points: state.totalScore };
   let all;
   try {
@@ -801,34 +550,6 @@ function showSessionRanking() {
     all = [entry]; // mostra ao menos a pontuação desta partida
   }
   renderRanking(buildRankingView(all, all.length - 1));
-}
-
-let rankingRequestId = 0; // ignora respostas antigas se o jogador já recomeçou
-
-// Com API: salva a partida no banco e mostra o ranking geral. Sem API (ou se falhar): ranking da sessão.
-async function showRanking(payload) {
-  const requestId = ++rankingRequestId;
-
-  if (!API_BASE_URL) {
-    setRankingInfo("Ranking desta sessão", "");
-    showSessionRanking();
-    return;
-  }
-
-  setRankingInfo("Ranking geral", "Salvando sua partida e carregando o ranking...");
-  ui.rankingList.replaceChildren();
-  try {
-    const saved = await saveMatch(payload);
-    const rows = await fetchRanking(saved && saved.id, CONFIG.RANKING_LIMIT);
-    if (requestId !== rankingRequestId) return;
-    setRankingInfo("Ranking geral", "");
-    renderRanking(withGaps(rows));
-  } catch (err) {
-    console.warn("[devclash] Ranking geral indisponível, usando o da sessão:", err);
-    if (requestId !== rankingRequestId) return;
-    setRankingInfo("Ranking desta sessão", "Não foi possível conectar ao servidor; sua partida não foi salva no ranking geral.");
-    showSessionRanking();
-  }
 }
 
 function handleActionClick() {
@@ -849,7 +570,7 @@ async function startQuiz() {
   timer.stop();
   showScreen("loading");
   try {
-    const raw = await loadQuestions(CONFIG.API_QUESTIONS_LIMIT);
+    const raw = await loadQuestions(CONFIG.QUESTIONS_PER_GAME);
     if (!Array.isArray(raw) || raw.length === 0) throw new Error("Nenhuma pergunta disponível.");
     state.questions = prepareQuestions(raw);
     resetState();
@@ -882,7 +603,6 @@ function goToStart() {
   timer.stop();
   state.status = "idle";
   showScreen("start");
-  speech.announce(speechForStart());
   updateStartButton();
   ui.playerName.focus();
   ui.playerName.select();
@@ -912,30 +632,6 @@ ui.restartBtn.addEventListener("click", goToStart);
 ui.endBtn.addEventListener("click", handleEndNow);
 ui.retryBtn.addEventListener("click", startQuiz);
 
-ui.ttsToggle.addEventListener("click", () => {
-  speech.enabled = !speech.enabled;
-  speech.save();
-  if (speech.enabled) speech.speak(`Leitura em voz alta ligada. ${speech.lastText}`);
-  else speech.stop();
-  renderTtsControls();
-});
-ui.ttsRepeat.addEventListener("click", () => {
-  if (speech.pending > 0) speech.stop();
-  else speech.speak(speech.lastText);
-});
-ui.ttsRate.addEventListener("change", () => {
-  speech.rate = Number(ui.ttsRate.value) || 1;
-  speech.save();
-  if (speech.enabled) speech.speak(speech.lastText); // repete já na nova velocidade
-});
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") speech.stop(); // Esc interrompe a leitura
-});
-
-speech.onChange = renderTtsControls;
-speech.init();
-speech.lastText = speechForStart();
-renderTtsControls();
-
 // O quiz só começa quando o jogador informa o nome e clica em "Começar".
 updateStartButton();
+mascot.onScreen("start", "");
