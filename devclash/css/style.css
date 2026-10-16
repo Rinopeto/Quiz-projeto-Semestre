@@ -262,6 +262,254 @@ code {
   .timer-row { flex-direction: column; gap: 2px; }
 }
 
+/* =========================================
+   DEVCLASH — REFINAMENTO DA TELA INICIAL
+   Mantém as funcionalidades atuais do projeto
+   ========================================= */
+
+:root {
+  --primary: #28618f;
+  --primary-hover: #1e4c73;
+  --primary-light: #e4f1fb;
+  --grey-200: #f4f8fc;
+  --grey-400: #edf3f9;
+  --border: #d3deea;
+  --muted: #5c6f85;
+}
+
+/* Fundo mais leve e moderno */
+body {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      #ffffff 0%,
+      #f1f6fc 48%,
+      #eaf1f8 100%
+    );
+  color: #1b2c40;
+}
+
+/* Cabeçalho mais amplo */
+.topbar {
+  background: linear-gradient(110deg, #24547c, #3676a5);
+  border-bottom: 3px solid #d5e9f8;
+  box-shadow: 0 3px 14px rgba(31, 70, 105, 0.12);
+}
+
+.topbar-inner {
+  max-width: 920px;
+  min-height: 72px;
+  padding: 16px 24px;
+  gap: 8px 18px;
+}
+
+.brand {
+  font-size: 1.8rem;
+  letter-spacing: -1.2px;
+}
+
+.brand span {
+  color: #ffe66d;
+}
+
+.tagline {
+  color: #f1f7fc;
+  font-size: 0.85rem;
+}
+
+/* Área central */
+.app {
+  max-width: 920px;
+  padding: 44px 24px 100px;
+}
+
+/* Cartão inicial mais sofisticado */
+#screen-start .card {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 36px 40px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #d7e3ef;
+  border-radius: 18px;
+  box-shadow:
+    0 12px 35px rgba(37, 76, 113, 0.08),
+    0 2px 5px rgba(37, 76, 113, 0.04);
+  animation: devclash-entrada 0.45s ease-out;
+}
+
+/* Identificação visual da área inicial */
+#screen-start .card::before {
+  content: "DESAFIO DE CONHECIMENTO  /  SQL";
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 7px 12px;
+  color: #245b87;
+  background: #eaf4fc;
+  border: 1px solid #d7eafa;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+}
+
+/* Título */
+#screen-start .card-title {
+  margin-bottom: 14px;
+  color: #204f78;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  line-height: 1.25;
+  letter-spacing: -0.8px;
+}
+
+#screen-start .card > .muted {
+  max-width: 580px;
+  font-size: 0.95rem;
+  line-height: 1.85;
+}
+
+/* Níveis de dificuldade */
+#screen-start .legend-title {
+  margin-top: 26px;
+  margin-bottom: 10px;
+  color: #253c54;
+}
+
+#screen-start .legend {
+  gap: 10px;
+}
+
+#screen-start .difficulty {
+  padding: 5px 13px;
+  transition: transform 0.2s ease;
+}
+
+#screen-start .legend .difficulty:hover {
+  transform: translateY(-2px);
+}
+
+/* Campo do nome */
+#screen-start .field {
+  margin-top: 26px;
+  margin-bottom: 22px;
+}
+
+#screen-start .field-label {
+  margin-bottom: 9px;
+  color: #253c54;
+  font-size: 0.9rem;
+}
+
+#screen-start .field input {
+  min-height: 50px;
+  padding: 13px 15px;
+  background: #f8fbff;
+  border: 1px solid #cbd9e8;
+  border-radius: 9px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+#screen-start .field input:focus {
+  background: #ffffff;
+  border-color: #3676a5;
+  box-shadow: 0 0 0 4px rgba(54, 118, 165, 0.12);
+  outline: none;
+}
+
+#screen-start .field input::placeholder {
+  color: #8798aa;
+}
+
+#screen-start .hint {
+  font-size: 0.8rem;
+}
+
+/* Botão principal */
+#screen-start #start-btn {
+  min-height: 50px;
+  border-radius: 9px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  box-shadow: 0 4px 10px rgba(40, 97, 143, 0.13);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+#screen-start #start-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 16px rgba(40, 97, 143, 0.22);
+}
+
+#screen-start #start-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Entrada suave */
+@keyframes devclash-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ajustes para celulares */
+@media (max-width: 600px) {
+  .topbar-inner {
+    padding: 14px 16px;
+    gap: 7px;
+  }
+
+  .brand {
+    font-size: 1.55rem;
+  }
+
+  .tagline {
+    font-size: 0.76rem;
+  }
+
+  .app {
+    padding: 24px 14px 100px;
+  }
+
+  #screen-start .card {
+    padding: 25px 20px;
+    border-radius: 14px;
+  }
+
+  #screen-start .card-title {
+    font-size: 1.55rem;
+  }
+
+  #screen-start .legend {
+    gap: 8px;
+  }
+
+  #screen-start .difficulty {
+    padding: 4px 9px;
+    font-size: 0.74rem;
+  }
+}
+
+/* Respeita quem prefere menos animações */
+@media (prefers-reduced-motion: reduce) {
+  #screen-start .card {
+    animation: none;
+  }
+
+  #screen-start .difficulty,
+  #screen-start #start-btn {
+    transition: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
