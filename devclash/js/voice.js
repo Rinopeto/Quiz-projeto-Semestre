@@ -62,6 +62,8 @@ const claudinhoVoice = (() => {
 
   // Bipe curto e agudo, no estilo "robô ligando". Falha em silêncio se o navegador bloquear o áudio.
   function chirp() {
+    // Antes do primeiro clique o navegador bloqueia o áudio (e avisa no console); então nem tenta.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
