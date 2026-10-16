@@ -60,6 +60,32 @@
   border-bottom-width: 0;
 }
 
+/* Botão de som, à esquerda do mascote. É o único item clicável (o resto ignora cliques). */
+.claudinho-voice {
+  position: absolute;
+  right: calc(var(--cl-w) + 4px);
+  bottom: 10px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid #7cffb2;
+  border-radius: 50%;
+  background: #1b1340;
+  color: #7cffb2;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(27, 19, 64, 0.28);
+}
+.claudinho-voice:hover { background: #2b2257; }
+.claudinho-voice:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.claudinho-voice svg { width: 22px; height: 22px; }
+.claudinho-voice .v-off { display: none; }
+.claudinho-voice.is-off .v-on { display: none; }
+.claudinho-voice.is-off .v-off { display: inline; }
+.claudinho-voice.is-off { color: #b8b3d6; border-color: #b8b3d6; }
+
 /* Rosto: só o olho, a boca e o braço do estado atual aparecem */
 .claudinho .cl-eyes,
 .claudinho .cl-mouth { display: none; }
