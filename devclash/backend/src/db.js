@@ -1,10 +1,6 @@
-const { Pool } = require("pg");
+import postgres from 'postgres'
 
-// Carregue o .env (dotenv) ANTES de importar este módulo.
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Bancos gerenciados (Neon, Supabase, Render...) costumam exigir SSL: DATABASE_SSL=true
-  ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined
-});
+const connectionString = process.env.DATABASE_URL
+const sql = postgres(connectionString)
 
-module.exports = { pool };
+export default sql
