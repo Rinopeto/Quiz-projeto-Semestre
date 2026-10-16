@@ -541,8 +541,10 @@ function isValidQuestion(q) {
 async function loadQuestions(limit) {
   if (!API_BASE_URL) return cloneLocalQuestions();
 
+  // O Render gratuito "dorme" após alguns minutos parado e leva até ~1 min para acordar.
+  // Esperar aqui é melhor do que desistir cedo e cair nas perguntas locais (que não vêm do banco).
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
   try {
     const query = limit ? `?limit=${encodeURIComponent(limit)}` : "";
     const response = await fetch(`${API_BASE_URL}/api/questions${query}`, { signal: controller.signal });
