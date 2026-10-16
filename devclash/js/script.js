@@ -8,7 +8,7 @@ const CONFIG = {
   WARNING_SECONDS: 10,
   MAX_POINTS_PER_QUESTION: 10,
   WRONG_ANSWER_POINTS: 1, // resposta errada vale 1 ponto; tempo esgotado vale 0
-  QUESTIONS_PER_GAME: 0, // quantas perguntas sorteadas por partida (0 = todas)
+  QUESTIONS_PER_GAME: 10, // quantas perguntas sorteadas por partida (0 = todas)
   SORT_BY_DIFFICULTY: true, // dentro da partida, vai do fácil ao difícil (a ordem é sorteada dentro de cada nível)
   SHUFFLE_OPTIONS: true, // embaralha a ordem das alternativas
   RANKING_LIMIT: 10,
@@ -141,6 +141,14 @@ function buildRankingView(all, currentIndex, limit = CONFIG.RANKING_LIMIT) {
   return rows;
 }
 
+// Monta as linhas do ranking geral (vindo do banco): top N e, se ficou de fora, a linha do jogador.
+function buildGlobalRankingView(rows, playerName, limit = CONFIG.RANKING_LIMIT) {
+  const view = rows.map((row) => ({ position: row.position, name: row.name, points: row.points, isYou: row.name === playerName }));
+  const top = view.filter((row) => row.position <= limit);
+  const you = view.find((row) => row.isYou && row.position > limit);
+  return you ? [...top, { gap: true }, you] : top;
+}
+
 /* =========================================================
  * Regras de negócio (funções puras)
  * ========================================================= */
@@ -254,6 +262,8 @@ const ui = {
   questionPoints: $("question-points"),
   actionBtn: $("action-btn"),
   resultTitle: $("result-title"),
+  rankingTitle: $("ranking-title"),
+  rankingNote: $("ranking-note"),
   rankingList: $("ranking-list"),
   restartBtn: $("restart-btn"),
   endBtn: $("end-btn")
@@ -537,7 +547,33 @@ function finishQuiz() {
   showScreen("result");
   mascot.onResult(getSummary());
   ui.resultTitle.focus({ preventScroll: true });
-  saveMatch(buildMatchPayload()).catch((err) => console.warn("[devclash] Não foi possível salvar a partida:", err));
+
+  // Salva a partida e, depois, troca o ranking da sessão pelo ranking geral do banco.
+  // Se qualquer etapa falhar, o ranking da sessão (já na tela) continua valendo.
+  const requestId = ++rankingRequestId;
+  const playerName = state.playerName;
+  saveMatch(buildMatchPayload())
+    .then(() => loadRanking(CONFIG.RANKING_LIMIT, playerName))
+    .then((rows) => {
+      // Ignora a resposta se o jogador já saiu desta tela ou começou outra partida.
+      if (!rows || requestId !== rankingRequestId || ui.screens.result.hidden) return;
+      showGlobalRanking(rows, playerName);
+    })
+    .catch((err) => console.warn("[devclash] Não foi possível salvar a partida:", err));
+}
+
+let rankingRequestId = 0;
+
+function showGlobalRanking(rows, playerName) {
+  setRankingMode(true);
+  renderRanking(buildGlobalRankingView(rows, playerName));
+}
+
+// Troca o título só quando muda de fato; o título é aria-live, então só o ranking geral é anunciado.
+function setRankingMode(isGlobal) {
+  const title = isGlobal ? "Ranking geral" : "Ranking desta sessão";
+  if (ui.rankingTitle.textContent !== title) ui.rankingTitle.textContent = title;
+  ui.rankingNote.hidden = !isGlobal;
 }
 
 function showRanking() {
@@ -549,6 +585,7 @@ function showRanking() {
     console.error("[devclash] Falha ao salvar no ranking:", err);
     all = [entry]; // mostra ao menos a pontuação desta partida
   }
+  setRankingMode(false);
   renderRanking(buildRankingView(all, all.length - 1));
 }
 
