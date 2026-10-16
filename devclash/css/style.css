@@ -237,6 +237,7 @@ code {
 
 /* Ranking (RQ04) */
 .ranking-title { margin: 0 0 8px; font-size: 1.05rem; font-weight: 700; }
+.ranking-note { margin: -4px 0 8px; font-size: 0.85rem; }
 .ranking-list { list-style: none; margin: 0 0 24px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .ranking-list li { display: flex; align-items: baseline; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--grey-400); }
 .ranking-list li:nth-child(even) { background: var(--grey-200); }
@@ -248,13 +249,6 @@ code {
 .ranking-list li.is-you { background: var(--primary-light); box-shadow: inset 4px 0 0 var(--primary); }
 .ranking-list li.is-you .rank-pos { color: var(--primary); }
 .ranking-list li.rank-gap { justify-content: center; color: var(--muted); }
-
-/* Acessibilidade: leitura em voz alta */
-.a11y-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
-.btn-small { padding: 10px 14px; font-size: 0.85rem; }
-.btn-secondary[aria-pressed="true"] { background: var(--primary-light); border: 2px solid var(--primary); padding: 9px 13px; }
-.tts-rate { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; }
-.tts-rate select { font: inherit; font-size: 0.85rem; padding: 9px 8px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
 
 /* Telas pequenas */
 @media (max-width: 480px) {
