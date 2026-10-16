@@ -106,7 +106,7 @@
       </article>
     </section>
 
-    <!-- Resultado + ranking da sessão (RQ03, RQ04, RQ05) -->
+    <!-- Resultado + ranking (RQ03, RQ04, RQ05): da sessão, trocado pelo ranking geral do banco quando a API responde -->
     <section id="screen-result" class="screen" hidden aria-labelledby="result-title">
       <div class="card">
         <h2 id="result-title" class="card-title" tabindex="-1">Fim de jogo!</h2>
@@ -120,7 +120,8 @@
           <div><dt>Sem resposta (tempo)</dt><dd id="result-timeouts">0</dd></div>
         </dl>
 
-        <h3 class="ranking-title">Ranking desta sessão</h3>
+        <h3 id="ranking-title" class="ranking-title" aria-live="polite">Ranking desta sessão</h3>
+        <p id="ranking-note" class="ranking-note muted" hidden>Mostra a melhor pontuação de cada jogador.</p>
         <ol id="ranking-list" class="ranking-list"></ol>
 
         <button id="restart-btn" class="btn btn-primary btn-block" type="button">Jogar novamente</button>
