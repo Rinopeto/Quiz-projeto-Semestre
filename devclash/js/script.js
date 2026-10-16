@@ -8,7 +8,7 @@ const CONFIG = {
   WARNING_SECONDS: 10,
   MAX_POINTS_PER_QUESTION: 10,
   WRONG_ANSWER_POINTS: 1, // resposta errada vale 1 ponto; tempo esgotado vale 0
-  QUESTIONS_PER_GAME: 45, // quantas perguntas sorteadas por partida (0 = todas)
+  QUESTIONS_PER_GAME: 0, // quantas perguntas sorteadas por partida (0 = todas)
   SORT_BY_DIFFICULTY: true, // dentro da partida, vai do fácil ao difícil (a ordem é sorteada dentro de cada nível)
   SHUFFLE_OPTIONS: true, // embaralha a ordem das alternativas
   RANKING_LIMIT: 10,
