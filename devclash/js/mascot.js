@@ -13,8 +13,11 @@
  *   data-arm    down | up (acenando)
  * Os frames seguem a folha de sprites: 1 parado, 2-4 fala, 5 piscando, 6 feliz, 7 triste, 8 surpreso.
  *
- * O mascote é decorativo (aria-hidden): quem usa leitor de tela continua recebendo o resultado
- * de cada pergunta pela área de feedback do quiz, sem anúncio duplicado.
+ * O desenho e o balão são decorativos (aria-hidden): quem usa leitor de tela continua recebendo
+ * o resultado de cada pergunta pela área de feedback do quiz, sem anúncio duplicado.
+ *
+ * A voz (js/voice.js) é opcional: sem ela, ou com o botão de som desligado, ele só mexe a boca e
+ * mostra o balão. O botão de som (#claudinho-voice) também é ligado aqui.
  */
 const claudinho = (() => {
   const root = document.getElementById("claudinho");
@@ -54,7 +57,9 @@ const claudinho = (() => {
     timeout: ["O tempo acabou!", "Ih, estourou o tempo!"],
     resultGreat: "Mandou muito bem! Bora bater esse recorde?",
     resultGood: "Bom trabalho! Dá pra subir no ranking.",
-    resultTry: "Cada partida ensina algo. Bora de novo?"
+    resultTry: "Cada partida ensina algo. Bora de novo?",
+    voiceOn: "Voz ligada! Agora eu falo com você.",
+    voiceOff: "Voz desligada. Continuo por aqui!"
   };
 
   const lastPicked = {};
@@ -65,6 +70,11 @@ const claudinho = (() => {
     lastPicked[key] = options[Math.floor(Math.random() * options.length)];
     return lastPicked[key];
   }
+
+  // Voz opcional. Sem voice.js carregado, vira um objeto que não fala.
+  const voice = typeof claudinhoVoice !== "undefined"
+    ? claudinhoVoice
+    : { supported: false, speak: () => false, cancel() {}, setEnabled() {}, isEnabled: () => false };
 
   const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -129,9 +139,23 @@ const claudinho = (() => {
   function say(text) {
     bubble.textContent = text; // textContent: o nome do jogador nunca vira HTML
     bubble.classList.add("is-visible");
+    // Sem voz (ou se o navegador a recusar), a boca e o balão seguem por tempo fixo.
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(hideBubble, Math.min(6500, 2800 + text.length * 45));
     startTalking(Math.min(3500, 500 + text.length * 60));
+    // Com voz, a boca e o balão acompanham a fala de verdade (com um limite de segurança).
+    voice.speak(text, {
+      onStart() {
+        startTalking(15000);
+        clearTimeout(bubbleTimer);
+        bubbleTimer = setTimeout(hideBubble, 15000);
+      },
+      onEnd() {
+        stopTalking();
+        clearTimeout(bubbleTimer);
+        bubbleTimer = setTimeout(hideBubble, 1500);
+      }
+    });
   }
 
   function lowerArm() {
@@ -156,6 +180,7 @@ const claudinho = (() => {
 
   // Junta humor + fala + gesto. Cada reação substitui a anterior.
   function react({ mood: next, text, gesture, waveMs }) {
+    voice.cancel(); // a reação nova interrompe a fala anterior
     setMood(next);
     if (waveMs) wave(waveMs);
     else lowerArm();
@@ -234,6 +259,30 @@ const claudinho = (() => {
     if (ratio >= 0.8) react({ mood: "happy", text: pick("resultGreat"), gesture: "is-jump", waveMs: 2400 });
     else if (ratio >= 0.5) react({ mood: "happy", text: pick("resultGood"), gesture: "is-jump" });
     else react({ mood: "idle", text: pick("resultTry") });
+  }
+
+  /* ---------- Botão de som ---------- */
+  const voiceBtn = document.getElementById("claudinho-voice");
+
+  function renderVoiceButton() {
+    const on = voice.isEnabled();
+    voiceBtn.setAttribute("aria-pressed", String(on));
+    voiceBtn.title = on ? "Desligar a voz do Claudinho" : "Ligar a voz do Claudinho";
+    voiceBtn.classList.toggle("is-off", !on);
+  }
+
+  if (voiceBtn) {
+    if (!voice.supported) {
+      voiceBtn.hidden = true; // navegador sem síntese de voz
+    } else {
+      renderVoiceButton();
+      voiceBtn.addEventListener("click", () => {
+        voice.setEnabled(!voice.isEnabled());
+        renderVoiceButton();
+        if (voice.isEnabled()) react({ mood: "happy", text: pick("voiceOn"), gesture: "is-pop" });
+        else react({ mood: "idle", text: pick("voiceOff") });
+      });
+    }
   }
 
   setMood("idle");
