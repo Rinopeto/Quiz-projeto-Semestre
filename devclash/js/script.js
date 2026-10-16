@@ -552,14 +552,25 @@ function finishQuiz() {
   // Se qualquer etapa falhar, o ranking da sessão (já na tela) continua valendo.
   const requestId = ++rankingRequestId;
   const playerName = state.playerName;
+  const isCurrent = () => requestId === rankingRequestId && !ui.screens.result.hidden;
   saveMatch(buildMatchPayload())
-    .then(() => loadRanking(CONFIG.RANKING_LIMIT, playerName))
+    .then(
+      () => loadRanking(CONFIG.RANKING_LIMIT, playerName),
+      (err) => {
+        console.warn("[devclash] Não foi possível salvar a partida:", err);
+        if (isCurrent()) showRankingNote("Não foi possível salvar a partida; mostrando o ranking da sessão.");
+        return undefined; // já avisado
+      }
+    )
     .then((rows) => {
       // Ignora a resposta se o jogador já saiu desta tela ou começou outra partida.
-      if (!rows || requestId !== rankingRequestId || ui.screens.result.hidden) return;
+      if (rows === undefined || !isCurrent()) return;
+      if (rows === null) {
+        if (API_BASE_URL) showRankingNote("Ranking geral indisponível agora; mostrando o da sessão.");
+        return;
+      }
       showGlobalRanking(rows, playerName);
-    })
-    .catch((err) => console.warn("[devclash] Não foi possível salvar a partida:", err));
+    });
 }
 
 let rankingRequestId = 0;
@@ -573,7 +584,14 @@ function showGlobalRanking(rows, playerName) {
 function setRankingMode(isGlobal) {
   const title = isGlobal ? "Ranking geral" : "Ranking desta sessão";
   if (ui.rankingTitle.textContent !== title) ui.rankingTitle.textContent = title;
+  ui.rankingNote.textContent = "Mostra a melhor pontuação de cada jogador.";
   ui.rankingNote.hidden = !isGlobal;
+}
+
+// Aviso sob o título quando o ranking geral não pôde ser usado (o da sessão continua na tela).
+function showRankingNote(text) {
+  ui.rankingNote.textContent = text;
+  ui.rankingNote.hidden = false;
 }
 
 function showRanking() {
