@@ -201,6 +201,11 @@ function createApp() {
   app.use(cors({ origin: origins.length ? origins : true, methods: ["GET", "POST"] }));
   app.use(express.json({ limit: "50kb" }));
 
+  // Página de boas-vindas: é o que aparece ao abrir o endereço do serviço no navegador.
+  app.get("/", (req, res) => {
+    res.json({ name: "API do DevClash", status: "ok", routes: ["/api/health", "/api/questions", "/api/ranking", "/api/matches"] });
+  });
+
   app.get("/api/health", wrap(async (req, res) => {
     try {
       await pool.query("SELECT 1");
