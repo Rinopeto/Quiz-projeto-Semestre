@@ -1,74 +1,80 @@
--- Esquema normalizado do DevClash (PostgreSQL)
--- Modelo para banco novo. As tabelas categories, sources, questions, options,
--- players, matches e match_answers separam entidades e evitam repetição de dados.
+-- Esquema do DevClash (PostgreSQL / Supabase), com os nomes em português usados no banco:
+--   categorias_perguntas, fontes, questao_quiz, opcoes_perguntas,
+--   jogadores, dados_partidas e registro_perguntas.
+-- Pode ser executado mais de uma vez (IF NOT EXISTS). Em um banco que já tem as tabelas, não altera nada.
 
-CREATE TABLE categories (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE
+CREATE TABLE IF NOT EXISTS categorias_perguntas (
+  id   SERIAL PRIMARY KEY,
+  nome TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE sources (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  url TEXT NOT NULL UNIQUE
+CREATE TABLE IF NOT EXISTS fontes (
+  id   SERIAL PRIMARY KEY,
+  nome TEXT NOT NULL,
+  url  TEXT NOT NULL
 );
 
-CREATE TABLE questions (
-  id SERIAL PRIMARY KEY,
-  category_id INTEGER NOT NULL REFERENCES categories(id),
-  source_id INTEGER NOT NULL REFERENCES sources(id),
-  statement TEXT NOT NULL,
-  explanation TEXT NOT NULL,
-  difficulty TEXT NOT NULL DEFAULT 'medio'
-    CHECK (difficulty IN ('facil', 'medio', 'dificil')),
-  is_bonus BOOLEAN NOT NULL DEFAULT FALSE,
-  active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- nome_fonte e url_fonte repetem os dados de "fontes" (fonte_id); a API prefere os de "fontes".
+CREATE TABLE IF NOT EXISTS questao_quiz (
+  id                   SERIAL PRIMARY KEY,
+  categoria_id         INTEGER NOT NULL REFERENCES categorias_perguntas (id),
+  pergunta             TEXT NOT NULL,
+  explicacao           TEXT NOT NULL,
+  nome_fonte           TEXT NOT NULL,
+  url_fonte            TEXT NOT NULL,
+  dificuldade_pergunta TEXT NOT NULL DEFAULT 'medio' CHECK (dificuldade_pergunta IN ('facil', 'medio', 'dificil')),
+  pergunta_bonus       BOOLEAN NOT NULL DEFAULT FALSE,
+  ativo                BOOLEAN NOT NULL DEFAULT TRUE,
+  criado_em            TIMESTAMPTZ NOT NULL DEFAULT now(),
+  fonte_id             INTEGER NOT NULL REFERENCES fontes (id)
 );
 
-CREATE TABLE options (
-  id SERIAL PRIMARY KEY,
-  question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
-  position SMALLINT NOT NULL CHECK (position >= 0),
-  text TEXT NOT NULL,
-  is_correct BOOLEAN NOT NULL DEFAULT FALSE,
-  UNIQUE (question_id, position)
+-- "posicao_pergunta" é o índice da alternativa (0, 1, 2...) e é o que o front usa em correctAnswer.
+CREATE TABLE IF NOT EXISTS opcoes_perguntas (
+  id               SERIAL PRIMARY KEY,
+  id_pergunta      INTEGER NOT NULL REFERENCES questao_quiz (id) ON DELETE CASCADE,
+  posicao_pergunta SMALLINT NOT NULL CHECK (posicao_pergunta >= 0),
+  alternativas     TEXT NOT NULL,
+  esta_correto     BOOLEAN NOT NULL DEFAULT FALSE,
+  UNIQUE (id_pergunta, posicao_pergunta)
 );
 
-CREATE UNIQUE INDEX options_one_correct_per_question
-  ON options(question_id) WHERE is_correct;
+-- Garante no máximo uma alternativa correta por pergunta (RQ02).
+CREATE UNIQUE INDEX IF NOT EXISTS opcoes_uma_correta_por_pergunta
+  ON opcoes_perguntas (id_pergunta) WHERE esta_correto;
 
--- Jogadores são separados das partidas para evitar repetir o nome em cada partida.
-CREATE TABLE players (
-  id SERIAL PRIMARY KEY,
-  nickname TEXT NOT NULL UNIQUE
-    CHECK (char_length(nickname) BETWEEN 1 AND 20),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- Jogadores ficam separados das partidas para não repetir o cadastro a cada partida.
+CREATE TABLE IF NOT EXISTS jogadores (
+  id        SERIAL PRIMARY KEY,
+  nome      TEXT NOT NULL UNIQUE CHECK (char_length(nome) BETWEEN 1 AND 20),
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE matches (
-  id SERIAL PRIMARY KEY,
-  player_id INTEGER NOT NULL REFERENCES players(id),
-  total_score INTEGER NOT NULL DEFAULT 0 CHECK (total_score >= 0),
-  started_at TIMESTAMPTZ,
-  finished_at TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS dados_partidas (
+  id              SERIAL PRIMARY KEY,
+  nome_jogador    TEXT NOT NULL CHECK (char_length(nome_jogador) BETWEEN 1 AND 20),
+  jogador_id      INTEGER NOT NULL REFERENCES jogadores (id),
+  pontuacao_total INTEGER NOT NULL DEFAULT 0 CHECK (pontuacao_total >= 0),
+  tempo_total     NUMERIC NOT NULL DEFAULT 0 CHECK (tempo_total >= 0),
+  comeco_em       TIMESTAMPTZ,
+  terminou_em     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE match_answers (
-  id SERIAL PRIMARY KEY,
-  match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-  question_id INTEGER NOT NULL REFERENCES questions(id),
-  selected_position SMALLINT,
-  status TEXT NOT NULL CHECK (status IN ('correct', 'incorrect', 'timeout')),
-  points SMALLINT NOT NULL CHECK (points BETWEEN 0 AND 10),
-  time_spent NUMERIC(5,2) NOT NULL CHECK (time_spent >= 0),
-  UNIQUE (match_id, question_id),
-  FOREIGN KEY (question_id, selected_position)
-    REFERENCES options(question_id, position)
+CREATE TABLE IF NOT EXISTS registro_perguntas (
+  id                  SERIAL PRIMARY KEY,
+  id_partida          INTEGER NOT NULL REFERENCES dados_partidas (id) ON DELETE CASCADE,
+  pergunta_id         INTEGER NOT NULL REFERENCES questao_quiz (id),
+  posicao_selecionada SMALLINT,
+  status              TEXT NOT NULL CHECK (status IN ('correct', 'incorrect', 'timeout')),
+  pontos              SMALLINT NOT NULL CHECK (pontos BETWEEN 0 AND 10),
+  tempo_gasto         NUMERIC(5, 2) NOT NULL CHECK (tempo_gasto >= 0),
+  UNIQUE (id_partida, pergunta_id),
+  FOREIGN KEY (pergunta_id, posicao_selecionada)
+    REFERENCES opcoes_perguntas (id_pergunta, posicao_pergunta)
 );
 
-CREATE INDEX questions_category_idx ON questions(category_id);
-CREATE INDEX questions_source_idx ON questions(source_id);
-CREATE INDEX matches_player_idx ON matches(player_id);
-CREATE INDEX match_answers_match_idx ON match_answers(match_id);
-CREATE INDEX match_answers_question_idx ON match_answers(question_id);
+CREATE INDEX IF NOT EXISTS questao_quiz_categoria_idx ON questao_quiz (categoria_id);
+CREATE INDEX IF NOT EXISTS questao_quiz_fonte_idx ON questao_quiz (fonte_id);
+CREATE INDEX IF NOT EXISTS dados_partidas_jogador_idx ON dados_partidas (jogador_id);
+CREATE INDEX IF NOT EXISTS registro_perguntas_partida_idx ON registro_perguntas (id_partida);
+CREATE INDEX IF NOT EXISTS registro_perguntas_pergunta_idx ON registro_perguntas (pergunta_id);
