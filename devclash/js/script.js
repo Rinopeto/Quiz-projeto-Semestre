@@ -689,4 +689,7 @@ ui.retryBtn.addEventListener("click", startQuiz);
 
 // O quiz só começa quando o jogador informa o nome e clica em "Começar".
 updateStartButton();
+
+// Acorda a API (Render gratuito) enquanto o jogador digita o nome, para as perguntas chegarem mais rápido.
+if (API_BASE_URL) fetch(`${API_BASE_URL}/api/health`).catch(() => {});
 mascot.onScreen("start", "");
