@@ -31,17 +31,7 @@ const QUESTIONS_SQL = `
   JOIN categorias_perguntas c ON c.id = q.categoria_id
   LEFT JOIN fontes f ON f.id = q.fonte_id
   JOIN opcoes_perguntas o ON o.id_pergunta = q.id
-  GROUP BY
-  q.id,
-  c.nome,
-  f.nome,
-  f.url,
-  q.pergunta,
-  q.explicacao,
-  q.nome_fonte,
-  q.url_fonte,
-  q.dificuldade_pergunta,
-  q.pergunta_bonus
+  GROUP BY q.id, c.nome, f.nome, f.url
 `;
 
 async function getQuestions(req, res) {
