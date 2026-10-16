@@ -128,11 +128,19 @@
     </section>
   </main>
 
-  <!-- Claudinho Robô, mascote do quiz (decorativo; o feedback acessível fica nas áreas com aria-live).
+  <!-- Claudinho Robô, mascote do quiz (o desenho e o balão são decorativos; o feedback acessível fica nas áreas com aria-live).
        js/mascot.js troca data-eyes / data-mouth / data-arm; css/mascot.css mostra só o estado atual. -->
-  <aside id="claudinho-wrap" class="claudinho-wrap" aria-hidden="true">
-    <div id="claudinho-bubble" class="claudinho-bubble"></div>
-    <svg id="claudinho" class="claudinho" viewBox="44 10 232 270" focusable="false" data-eyes="open" data-mouth="smile" data-arm="down">
+  <aside id="claudinho-wrap" class="claudinho-wrap">
+    <div id="claudinho-bubble" class="claudinho-bubble" aria-hidden="true"></div>
+    <!-- Botão de som: único controle do mascote (js/voice.js fala, js/mascot.js liga o botão) -->
+    <button id="claudinho-voice" class="claudinho-voice" type="button" aria-label="Voz do Claudinho" aria-pressed="true" title="Desligar a voz do Claudinho">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+        <path class="v-on" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/>
+        <path class="v-off" d="M16 9l5 6M21 9l-5 6"/>
+      </svg>
+    </button>
+    <svg id="claudinho" class="claudinho" viewBox="44 10 232 270" aria-hidden="true" focusable="false" data-eyes="open" data-mouth="smile" data-arm="down">
       <ellipse class="cl-shadow" cx="160" cy="268" rx="62" ry="7" fill="#000" opacity="0.14"/>
       <g class="cl-bob"><g class="cl-react">
         <!-- antena -->
@@ -196,9 +204,10 @@
     </svg>
   </aside>
 
-  <!-- Ordem importa: config.js, questions.js e mascot.js definem o que script.js usa -->
+  <!-- Ordem importa: config.js, questions.js, voice.js e mascot.js definem o que script.js usa -->
   <script src="js/config.js"></script>
   <script src="js/questions.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/mascot.js"></script>
   <script src="js/script.js"></script>
 </body>
