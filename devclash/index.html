@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DevClash: desafios de SQL e bancos de dados.">
+  <title>DevClash</title>
+  <!-- Fonte de código JetBrains Mono (Google Fonts); sem internet cai na fonte monoespaçada do sistema -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mascot.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="brand">Dev<span>Clash</span></h1>
+      <p class="tagline">Desafios de SQL e bancos de dados</p>
+    </div>
+  </header>
+
+  <main class="app">
+    <noscript>
+      <div class="card"><p>Este quiz precisa de JavaScript para funcionar. Ative-o no navegador e recarregue a página.</p></div>
+    </noscript>
+
+    <!-- Início: nome do jogador (RQ01) -->
+    <section id="screen-start" class="screen" aria-labelledby="start-title">
+      <div class="card">
+        <h2 id="start-title" class="card-title">Pronto para o desafio?</h2>
+        <p class="muted">Responda perguntas de SQL e bancos de dados, uma por vez. Quanto mais rápido você acerta, mais pontos ganha (até 10 por pergunta). Errou? Você ainda leva 1 ponto e descobre uma curiosidade!</p>
+
+        <p class="legend-title">Níveis de dificuldade</p>
+        <ul class="legend">
+          <li><span class="difficulty is-facil">Fácil <span aria-hidden="true">●○○</span></span></li>
+          <li><span class="difficulty is-medio">Médio <span aria-hidden="true">●●○</span></span></li>
+          <li><span class="difficulty is-dificil">Difícil <span aria-hidden="true">●●●</span></span></li>
+        </ul>
+
+        <div class="field">
+          <label class="field-label" for="player-name">Seu nome</label>
+          <input id="player-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Como devemos te chamar?" aria-describedby="name-hint">
+          <p id="name-hint" class="hint">Digite seu nome para começar.</p>
+        </div>
+        <button id="start-btn" class="btn btn-primary btn-block" type="button" disabled>Começar</button>
+      </div>
+    </section>
+
+    <!-- Carregando -->
+    <section id="screen-loading" class="screen" aria-live="polite" hidden>
+      <div class="card"><p class="muted">Carregando perguntas…</p></div>
+    </section>
+
+    <!-- Erro ao carregar -->
+    <section id="screen-error" class="screen" hidden>
+      <div class="card">
+        <h2 class="card-title">Não foi possível carregar o quiz</h2>
+        <p class="muted" id="error-message"></p>
+        <button id="retry-btn" class="btn btn-primary btn-block" type="button">Tentar novamente</button>
+      </div>
+    </section>
+
+    <!-- Pergunta -->
+    <section id="screen-quiz" class="screen" hidden>
+      <article class="card">
+        <div class="quiz-meta">
+          <span id="progress-text" class="progress-text">Pergunta 1 de 10</span>
+          <span class="score-chip">Pontos: <strong id="total-score">0</strong></span>
+        </div>
+        <div id="progress" class="progress" role="progressbar" aria-label="Progresso do quiz" aria-valuemin="0" aria-valuemax="10" aria-valuenow="1">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <div class="timer" id="timer">
+          <div class="timer-row">
+            <span class="timer-time">Tempo: <strong id="timer-value">50</strong>s</span>
+            <span class="timer-worth">Valendo agora: <strong id="timer-points">10</strong> pts</span>
+          </div>
+          <div class="timer-track" aria-hidden="true">
+            <div id="timer-bar" class="timer-bar"></div>
+          </div>
+        </div>
+
+        <div class="tags">
+          <span id="difficulty" class="difficulty" hidden></span>
+          <span id="bonus" class="bonus" hidden>★ Bônus</span>
+          <span id="category" class="pill"></span>
+        </div>
+        <h2 id="question-text" class="question-text" tabindex="-1"></h2>
+
+        <div id="options" class="options" role="group" aria-labelledby="question-text"></div>
+
+        <div id="feedback" class="feedback" role="status" aria-live="polite" hidden>
+          <p id="feedback-title" class="feedback-title"></p>
+          <p id="feedback-answer" class="feedback-answer" hidden></p>
+          <p id="feedback-explanation" class="feedback-text" hidden><strong>Você sabia?</strong> <span id="feedback-text"></span></p>
+          <p id="source" class="source" hidden>Fonte: <a id="source-link" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+        </div>
+
+        <div class="card-footer">
+          <span class="muted">Pontos nesta pergunta: <strong id="question-points">–</strong></span>
+          <button id="action-btn" class="btn btn-primary btn-block" type="button" disabled>Confirmar resposta</button>
+          <button id="end-btn" class="btn btn-secondary btn-block" type="button">Encerrar agora</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- Resultado + ranking (RQ03, RQ04, RQ05): da sessão, trocado pelo ranking geral do banco quando a API responde -->
+    <section id="screen-result" class="screen" hidden aria-labelledby="result-title">
+      <div class="card">
+        <h2 id="result-title" class="card-title" tabindex="-1">Fim de jogo!</h2>
+        <p id="result-message" class="result-message"></p>
+        <p class="result-score"><strong id="result-score">0</strong><span class="muted"> / <span id="result-max">0</span> pontos</span></p>
+
+        <dl class="result-grid">
+          <div><dt>Acertos</dt><dd id="result-correct">0</dd></div>
+          <div><dt>Erros</dt><dd id="result-wrong">0</dd></div>
+          <div><dt>Respondidas</dt><dd id="result-answered">0</dd></div>
+          <div><dt>Sem resposta (tempo)</dt><dd id="result-timeouts">0</dd></div>
+        </dl>
+
+        <h3 id="ranking-title" class="ranking-title" aria-live="polite">Ranking desta sessão</h3>
+        <p id="ranking-note" class="ranking-note muted" hidden>Mostra a melhor pontuação de cada jogador.</p>
+        <ol id="ranking-list" class="ranking-list"></ol>
+
+        <button id="restart-btn" class="btn btn-primary btn-block" type="button">Jogar novamente</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Claudinho Robô, mascote do quiz (o desenho e o balão são decorativos; o feedback acessível fica nas áreas com aria-live).
+       js/mascot.js troca data-eyes / data-mouth / data-arm; css/mascot.css mostra só o estado atual. -->
+  <aside id="claudinho-wrap" class="claudinho-wrap">
+    <div id="claudinho-bubble" class="claudinho-bubble" aria-hidden="true"></div>
+    <!-- Botão de som: único controle do mascote (js/voice.js fala, js/mascot.js liga o botão) -->
+    <button id="claudinho-voice" class="claudinho-voice" type="button" aria-label="Voz do Claudinho" aria-pressed="true" title="Desligar a voz do Claudinho">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+        <path class="v-on" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/>
+        <path class="v-off" d="M16 9l5 6M21 9l-5 6"/>
+      </svg>
+    </button>
+    <svg id="claudinho" class="claudinho" viewBox="44 10 232 270" aria-hidden="true" focusable="false" data-eyes="open" data-mouth="smile" data-arm="down">
+      <ellipse class="cl-shadow" cx="160" cy="268" rx="62" ry="7" fill="#000" opacity="0.14"/>
+      <g class="cl-bob"><g class="cl-react">
+        <!-- antena -->
+        <g class="cl-antenna">
+          <line x1="160" y1="62" x2="160" y2="36" stroke="#1b1340" stroke-width="6" stroke-linecap="round"/>
+          <circle class="cl-ball" cx="160" cy="32" r="9" fill="#ffd23f" stroke="#e8a900" stroke-width="3"/>
+        </g>
+        <!-- orelhas e pés -->
+        <rect x="62" y="100" width="16" height="44" rx="6" fill="#b5532f"/>
+        <rect x="242" y="100" width="16" height="44" rx="6" fill="#b5532f"/>
+        <rect x="116" y="248" width="30" height="10" rx="5" fill="#2b2257"/>
+        <rect x="174" y="248" width="30" height="10" rx="5" fill="#2b2257"/>
+        <!-- braço esquerdo e braço direito baixo -->
+        <line x1="110" y1="215" x2="86" y2="236" stroke="#b5532f" stroke-width="12" stroke-linecap="round"/>
+        <circle cx="84" cy="238" r="15" fill="#b5532f"/>
+        <g class="cl-arm-down">
+          <line x1="210" y1="215" x2="234" y2="236" stroke="#b5532f" stroke-width="12" stroke-linecap="round"/>
+          <circle cx="236" cy="238" r="15" fill="#b5532f"/>
+        </g>
+        <!-- corpo -->
+        <rect x="104" y="192" width="112" height="58" rx="20" fill="#c4623f"/>
+        <text x="160" y="230" font-family="Consolas, Menlo, 'Courier New', monospace" font-size="26" font-weight="700" fill="#fff" text-anchor="middle">{ }</text>
+        <!-- braço direito acenando -->
+        <g class="cl-arm-up">
+          <line x1="210" y1="215" x2="240" y2="195" stroke="#b5532f" stroke-width="12" stroke-linecap="round"/>
+          <circle cx="246" cy="190" r="15" fill="#b5532f"/>
+        </g>
+        <!-- cabeça, tela e bochechas -->
+        <rect x="76" y="62" width="168" height="124" rx="34" fill="#D97757"/>
+        <rect x="94" y="80" width="132" height="90" rx="22" fill="#1b1340"/>
+        <circle cx="110" cy="142" r="6" fill="#ff8fab" opacity="0.6"/>
+        <circle cx="210" cy="142" r="6" fill="#ff8fab" opacity="0.6"/>
+        <!-- olhos -->
+        <g class="cl-eyes cl-eyes-open" fill="#7CFFB2">
+          <ellipse cx="130" cy="112" rx="9" ry="12"/><ellipse cx="190" cy="112" rx="9" ry="12"/>
+        </g>
+        <g class="cl-eyes cl-eyes-blink" stroke="#7CFFB2" stroke-width="6" stroke-linecap="round">
+          <path d="M121 112 H139"/><path d="M181 112 H199"/>
+        </g>
+        <g class="cl-eyes cl-eyes-happy" fill="none" stroke="#7CFFB2" stroke-width="7" stroke-linecap="round">
+          <path d="M118 118 Q130 100 142 118"/><path d="M178 118 Q190 100 202 118"/>
+        </g>
+        <g class="cl-eyes cl-eyes-sad">
+          <g fill="none" stroke="#7CFFB2" stroke-width="7" stroke-linecap="round">
+            <path d="M118 108 Q130 124 142 108"/><path d="M178 108 Q190 124 202 108"/>
+          </g>
+          <ellipse cx="190" cy="132" rx="4" ry="6" fill="#6ec6ff"/>
+        </g>
+        <g class="cl-eyes cl-eyes-wow" fill="#7CFFB2">
+          <ellipse cx="130" cy="110" rx="12" ry="15"/><ellipse cx="190" cy="110" rx="12" ry="15"/>
+        </g>
+        <!-- bocas -->
+        <path class="cl-mouth cl-mouth-smile" d="M142 142 Q160 158 178 142" fill="none" stroke="#7CFFB2" stroke-width="6" stroke-linecap="round"/>
+        <ellipse class="cl-mouth cl-mouth-s" cx="160" cy="146" rx="10" ry="5" fill="#7CFFB2"/>
+        <ellipse class="cl-mouth cl-mouth-m" cx="160" cy="147" rx="15" ry="9" fill="#7CFFB2"/>
+        <ellipse class="cl-mouth cl-mouth-l" cx="160" cy="150" rx="17" ry="14" fill="#7CFFB2"/>
+        <path class="cl-mouth cl-mouth-big-smile" d="M138 140 Q160 172 182 140 Z" fill="#7CFFB2"/>
+        <path class="cl-mouth cl-mouth-sad" d="M144 156 Q160 140 176 156" fill="none" stroke="#7CFFB2" stroke-width="6" stroke-linecap="round"/>
+        <ellipse class="cl-mouth cl-mouth-wow" cx="160" cy="150" rx="9" ry="11" fill="#7CFFB2"/>
+      </g></g>
+    </svg>
+  </aside>
+
+  <!-- Ordem importa: config.js, questions.js, voice.js e mascot.js definem o que script.js usa -->
+  <script src="js/config.js"></script>
+  <script src="js/questions.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/mascot.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>

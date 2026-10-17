@@ -1,0 +1,17 @@
+# Blueprint do Render (opcional): New + > Blueprint > aponte para o repositório.
+services:
+  - type: web
+    name: devclash-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # cole a string de conexão do Supabase (Session pooler)
+      - key: DATABASE_SSL
+        value: "true"
+      - key: CORS_ORIGIN
+        sync: false          # ex.: https://SEU_USUARIO.github.io
