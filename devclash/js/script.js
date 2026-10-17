@@ -240,6 +240,7 @@ const ui = {
   errorMessage: $("error-message"),
   retryBtn: $("retry-btn"),
   progressText: $("progress-text"),
+  sourceNote: $("source-note"),
   progress: $("progress"),
   progressBar: $("progress-bar"),
   totalScore: $("total-score"),
@@ -621,6 +622,19 @@ function resetState() {
   state.startedAt = new Date().toISOString();
 }
 
+// Avisa na tela do quiz quando as perguntas NÃO vieram do banco (ou quando alguma foi ignorada).
+function showQuestionsSource() {
+  const info = getQuestionsSource();
+  let text = "";
+  if (API_BASE_URL && info.source === "local") {
+    text = `Usando perguntas locais: ${info.reason}.`;
+  } else if (info.skipped.length) {
+    text = `${info.skipped.length} pergunta(s) do banco foram ignoradas por estarem incompletas (ids: ${info.skipped.join(", ")}).`;
+  }
+  ui.sourceNote.textContent = text;
+  ui.sourceNote.hidden = !text;
+}
+
 async function startQuiz() {
   timer.stop();
   showScreen("loading");
@@ -630,6 +644,7 @@ async function startQuiz() {
     state.questions = prepareQuestions(raw);
     resetState();
     showScreen("quiz");
+    showQuestionsSource();
     loadQuestion();
   } catch (err) {
     console.error("[devclash] Erro ao iniciar:", err);
