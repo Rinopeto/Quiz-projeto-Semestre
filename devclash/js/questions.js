@@ -538,8 +538,25 @@ function isValidQuestion(q) {
  * Se a API estiver fora do ar ou devolver dados inválidos, usa as perguntas locais,
  * assim o quiz continua funcionando (por exemplo, no GitHub Pages sem backend).
  */
+// De onde vieram as perguntas da última partida (para o aviso na tela do quiz).
+let questionsSource = { source: "local", reason: "", skipped: [] };
+function getQuestionsSource() {
+  return questionsSource;
+}
+
+// Traduz o erro da API em uma frase curta, para o jogador ou o desenvolvedor entender o motivo.
+function describeLoadFailure(err) {
+  if (err && err.name === "AbortError") return "o servidor demorou demais para responder";
+  if (err && /^HTTP \d+/.test(err.message)) return `o servidor respondeu com erro (${err.message})`;
+  if (err && err.name === "TypeError") return "não foi possível falar com o servidor (rede ou CORS_ORIGIN)";
+  return (err && err.message) || "motivo desconhecido";
+}
+
 async function loadQuestions(limit) {
-  if (!API_BASE_URL) return cloneLocalQuestions();
+  if (!API_BASE_URL) {
+    questionsSource = { source: "local", reason: "", skipped: [] };
+    return cloneLocalQuestions();
+  }
 
   // O Render gratuito "dorme" após alguns minutos parado e leva até ~1 min para acordar.
   // Esperar aqui é melhor do que desistir cedo e cair nas perguntas locais (que não vêm do banco).
@@ -550,12 +567,19 @@ async function loadQuestions(limit) {
     const response = await fetch(`${API_BASE_URL}/api/questions${query}`, { signal: controller.signal });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    if (!Array.isArray(data) || data.length === 0 || !data.every(isValidQuestion)) {
-      throw new Error("Resposta inválida da API");
-    }
-    return data;
+    if (!Array.isArray(data) || data.length === 0) throw new Error("a API não devolveu nenhuma pergunta");
+
+    // Uma pergunta incompleta no banco (por exemplo, sem alternativa correta) não derruba o jogo todo:
+    // ela é ignorada e as demais são usadas.
+    const valid = data.filter(isValidQuestion);
+    const skipped = data.filter((q) => !isValidQuestion(q)).map((q) => (q && q.id) ?? "?");
+    if (valid.length === 0) throw new Error(`todas as perguntas vieram incompletas (ids: ${skipped.join(", ")})`);
+    if (skipped.length) console.warn("[devclash] Perguntas da API ignoradas por estarem incompletas (ids):", skipped);
+    questionsSource = { source: "api", reason: "", skipped };
+    return valid;
   } catch (err) {
     console.warn("[devclash] API indisponível, usando perguntas locais:", err);
+    questionsSource = { source: "local", reason: describeLoadFailure(err), skipped: [] };
     return cloneLocalQuestions();
   } finally {
     clearTimeout(timeoutId);
