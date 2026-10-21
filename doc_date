@@ -9,7 +9,7 @@ O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolv
 
 ### Escopo: O que o sistema FAZ
 * Cadastra o jogador solicitando um nome de usuário (*nickname*) básico antes de iniciar a partida.
-* Apresenta uma sequência de **60 perguntas** no formato de alternativas (sendo 50 da fase normal e 10 pertencentes à Fase Bônus).
+* Apresenta uma sequência de **55 perguntas** no formato de alternativas (sendo 45 da fase normal e 10 pertencentes à Fase Bônus).
 * Controla um tempo limite de 60 segundos por pergunta.
 * Calcula a pontuação do jogador combinando a pontuação base por acerto e um bônus por segundos restantes no temporizador.
 * Registra e exibe o ranking geral de pontuação contendo todos os jogadores que já jogaram até o momento, ordenado pela maior pontuação (com o tempo total de resposta como critério de desempate).
@@ -26,7 +26,7 @@ O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolv
 
 ## 2. Usuários do Sistema
 
-* **Jogador / Estudante:** Informa seu nome, responde às 60 perguntas dentro do tempo limite, visualiza seu desempenho individual e consulta sua colocação no ranking geral.
+* **Jogador / Estudante:** Informa seu nome, responde às 55 perguntas dentro do tempo limite, visualiza seu desempenho individual e consulta sua colocação no ranking geral.
 * **Administrador / Professor:** Cadastra e mantém o banco de perguntas e as respostas corretas no sistema.
 
 ---
@@ -37,11 +37,11 @@ O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolv
 > 
 > Antes de começar a responder, o jogador faz um cadastro básico informando apenas o seu nome de usuário. O nome é obrigatório para identificar a jogada no ranking final. Assim que o cadastro é feito, o jogo se inicia imediatamente.
 > 
-> O jogo contém exatamente **60 perguntas** no formato de alternativas. As perguntas de 1 a 50 fazem parte da fase normal e as perguntas de 51 a 60 pertencem à Fase Bônus. Cada pergunta possui um enunciado, o gabarito (Certo ou Errado) e um temporizador de 30 segundos.
+> O jogo contém exatamente **55 perguntas** no formato de alternativas. As perguntas de 1 a 45 fazem parte da fase normal e as perguntas de 46 a 55 pertencem à Fase Bônus. Cada pergunta possui um enunciado, o gabarito (Certo ou Errado) e um temporizador de 30 segundos.
 > 
 > Quando o jogador escolhe uma alternativa ou o tempo esgota, o sistema calcula os pontos daquela questão. Acertar a questão garante uma pontuação base mais um bônus proporcional aos segundos que sobraram no temporizador. Se o tempo esgotar ou a resposta for incorreta, o jogador não pontua naquela questão.
 > 
-> Ao responder a 60ª pergunta, o jogo finaliza e apresenta a tela do ranking de pontuação geral. O ranking lista todos os jogadores que já jogaram até o presente momento, ordenando primeiro pela maior pontuação acumulada e, em caso de empate na pontuação, pelo menor tempo total de resposta. Para facilitar a visualização, a linha do jogador recém-cadastrado é destacada na tabela de ranking."
+> Ao responder a 45ª pergunta, o jogo finaliza e apresenta a tela do ranking de pontuação geral. O ranking lista todos os jogadores que já jogaram até o presente momento, ordenando primeiro pela maior pontuação acumulada e, em caso de empate na pontuação, pelo menor tempo total de resposta. Para facilitar a visualização, a linha do jogador recém-cadastrado é destacada na tabela de ranking."
 
 ---
 
@@ -58,7 +58,7 @@ O **DevClash** é um jogo de quiz interativo voltado para estudantes e desenvolv
 
 ### Requisitos Funcionais (RF / RA)
 * **RF01 (Funcional):** O sistema deve fornecer uma tela inicial para o cadastro básico do nome do jogador antes de iniciar as perguntas.
-* **RF02 (Funcional):** O sistema deve exibir as 60 perguntas em sequência, controlando individualmente o tempo limite de 30 segundos para cada uma.
+* **RF02 (Funcional):** O sistema deve exibir as 55 perguntas em sequência, controlando individualmente o tempo limite de 30 segundos para cada uma.
 * **RF03 (Funcional):** O sistema deve calcular automaticamente os pontos obtidos em cada questão com base no acerto e no tempo restante.
 * **RF04 (Funcional):** O sistema deve apresentar a tela final com o ranking de pontuação geral imediatamente após o término da 60ª pergunta.
 * **RF05 (Funcional):** O sistema deve aplicar um destaque visual no registro do jogador atual dentro da tabela do ranking geral.
