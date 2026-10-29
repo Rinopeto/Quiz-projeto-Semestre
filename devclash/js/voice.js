@@ -1,9 +1,9 @@
 "use strict";
 
 /*
- * Voz do Claudinho com os sons originais da Penny (Plants vs. Zombies 2).
+ * Voz do Claudinho.
  *
- * As amostras foram extraídas do áudio fornecido para o projeto e ficam em audio/penny/.
+ * As amostras foram extraídas do áudio fornecido para o projeto e ficam em audio/voz_claudinho/.
  * São sons robóticos não verbais: as frases continuam legíveis no balão do mascote.
  *
  * A interface é a mesma usada por js/mascot.js (speak, cancel, setEnabled,
@@ -37,8 +37,7 @@ const claudinhoVoice = (() => {
     // Evita repetir a mesma amostra em duas falas seguidas da mesma duração.
     if (total > 1 && number === lastClip[type]) number = (number % total) + 1;
     lastClip[type] = number;
-    return `audio/penny/${type}-${String(number).padStart(2, "0")}.mp3`;
-  }
+    return `audio/voz_claudinho/${type}-${String(number).padStart(2, "0")}.mp3`;  }
 
   function cancel() {
     currentId++;
@@ -53,7 +52,7 @@ const claudinhoVoice = (() => {
 
   /*
    * Mantém o contrato usado pelo mascote: onStart, onEnd e onError.
-   * O texto permanece no balão; o som é a fala característica da Penny.
+   * O texto permanece no balão;
    */
   function speak(text, handlers = {}) {
     cancel();
