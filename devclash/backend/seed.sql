@@ -1,6 +1,38 @@
 -- Dados iniciais (gerados a partir de js/questions.js). Pode ser executado mais de uma vez, mesmo com
 -- partidas já salvas: atualiza as perguntas e as alternativas de mesmo id, sem apagar as que já existem.
+--
+-- ESTRUTURA DO ARQUIVO
+--   1. categorias_perguntas : os temas das perguntas (ex.: 'Consultas SQL').
+--   2. fontes               : páginas de referência (documentação, Wikipédia...),
+--                             identificadas pela URL.
+--   3. questao_quiz         : as 45 perguntas, cada uma com enunciado, explicação,
+--                             fonte, dificuldade e indicação de pergunta bônus.
+--   4. opcoes_perguntas     : as alternativas de cada pergunta (4, ou 2 no
+--                             verdadeiro/falso), com a posição e qual é a correta.
+--   5. setval               : realinha a sequência de ids de questao_quiz.
+--
+-- COMO O SCRIPT PODE SER REEXECUTADO (idempotência)
+--   * categorias e fontes: só são inseridas se ainda não existirem (WHERE NOT EXISTS).
+--   * perguntas: INSERT ... ON CONFLICT (id) DO UPDATE, ou seja, insere ou atualiza pelo id.
+--   * alternativas: UPDATE das que existem + INSERT das que faltam + DELETE das que sobraram.
+--   Resultado: perguntas e alternativas de mesmo id são sobrescritas com o conteúdo
+--   deste arquivo. As partidas já salvas não são apagadas.
+--
+-- CONVENÇÕES
+--   * dificuldade_pergunta: 'facil', 'medio' ou 'dificil'.
+--   * pergunta_bonus: TRUE nas perguntas 41 a 45 (categoria 'História da tecnologia').
+--   * posicao_pergunta: 0 a 3 (0 e 1 na pergunta de verdadeiro/falso). A posição da
+--     alternativa correta varia de uma pergunta para outra.
+--   * Nos textos, '' (duas aspas simples) é como o SQL escreve um apóstrofo literal.
+--   * Os acentos graves (`) nos textos parecem ser marcação de código para a interface;
+--     para o PostgreSQL são texto comum.
 
+-- ----------------------------------------------------------------------------
+-- 1) CATEGORIAS
+-- O VALUES vira uma tabela temporária (alias v) com os nomes. O WHERE NOT EXISTS
+-- compara pelo nome e só deixa passar os que ainda não estão em categorias_perguntas,
+-- então reexecutar o script não duplica nada (e não exige UNIQUE na coluna).
+-- ----------------------------------------------------------------------------
 INSERT INTO categorias_perguntas (nome)
 SELECT v.nome
 FROM (VALUES
@@ -15,6 +47,12 @@ FROM (VALUES
 ) AS v(nome)
 WHERE NOT EXISTS (SELECT 1 FROM categorias_perguntas c WHERE c.nome = v.nome);
 
+-- ----------------------------------------------------------------------------
+-- 2) FONTES
+-- Mesmo padrão das categorias, mas a checagem é pela URL. Se a URL já existe, a
+-- linha é mantida como está: mudar o nome aqui não atualiza uma fonte já cadastrada.
+-- As perguntas apontam para estas linhas pelo fonte_id (seção 3).
+-- ----------------------------------------------------------------------------
 INSERT INTO fontes (nome, url)
 SELECT v.nome, v.url
 FROM (VALUES
@@ -63,18 +101,35 @@ FROM (VALUES
 ) AS v(nome, url)
 WHERE NOT EXISTS (SELECT 1 FROM fontes f WHERE f.url = v.url);
 
+-- ----------------------------------------------------------------------------
+-- 3) PERGUNTAS E ALTERNATIVAS
+-- Toda pergunta segue o mesmo molde de 4 comandos:
+--   (a) INSERT ... ON CONFLICT (id) DO UPDATE : grava ou atualiza a pergunta.
+--   (b) UPDATE ... esta_correto = FALSE       : limpa a marcação de correta antiga.
+--   (c) WITH v ... UPDATE + INSERT            : grava as alternativas (atualiza as
+--                                               existentes e insere as que faltam).
+--   (d) DELETE ... NOT IN (...)               : remove alternativas que sobraram.
+-- O bloco da pergunta 1 está comentado linha a linha. Os demais repetem o molde e
+-- levam só um cabeçalho com número, categoria, dificuldade e assunto.
+-- ----------------------------------------------------------------------------
+
+-- Pergunta 1 | Modelagem e DDL | fácil | PRIMARY KEY (UNIQUE + NOT NULL)
+-- (a) Grava a pergunta. Os valores abaixo seguem a ordem das colunas do INSERT.
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
-  1,
-  (SELECT id FROM categorias_perguntas WHERE nome = 'Modelagem e DDL'),
-  'Qual restrição (constraint) garante que cada linha da tabela seja identificada de forma única e não aceita valores nulos?',
-  'A `PRIMARY KEY` é a combinação de `UNIQUE` com `NOT NULL`: os valores não podem se repetir nem ser nulos. Uma tabela pode ter no máximo uma chave primária, formada por uma ou mais colunas. Já a `FOREIGN KEY` referencia outra tabela, a `CHECK` valida uma condição e a `DEFAULT` define um valor padrão.',
-  'Documentação do PostgreSQL: Constraints',
-  'https://www.postgresql.org/docs/current/ddl-constraints.html',
-  (SELECT id FROM fontes WHERE url = 'https://www.postgresql.org/docs/current/ddl-constraints.html' ORDER BY id LIMIT 1),
-  'facil',
-  FALSE
+  1,  -- id fixo: é a chave do ON CONFLICT e a ligação com as alternativas
+  (SELECT id FROM categorias_perguntas WHERE nome = 'Modelagem e DDL'),  -- id da categoria, buscado pelo nome (criada na seção 1)
+  'Qual restrição (constraint) garante que cada linha da tabela seja identificada de forma única e não aceita valores nulos?',  -- enunciado mostrado ao jogador
+  'A `PRIMARY KEY` é a combinação de `UNIQUE` com `NOT NULL`: os valores não podem se repetir nem ser nulos. Uma tabela pode ter no máximo uma chave primária, formada por uma ou mais colunas. Já a `FOREIGN KEY` referencia outra tabela, a `CHECK` valida uma condição e a `DEFAULT` define um valor padrão.',  -- explicação mostrada depois da resposta
+  'Documentação do PostgreSQL: Constraints',  -- nome da fonte (repete o que está em fontes, para exibição)
+  'https://www.postgresql.org/docs/current/ddl-constraints.html',  -- link da fonte (idem)
+  (SELECT id FROM fontes WHERE url = 'https://www.postgresql.org/docs/current/ddl-constraints.html' ORDER BY id LIMIT 1),  -- id da fonte em fontes; ORDER BY id LIMIT 1 pega a mais antiga se a URL se repetir
+  'facil',  -- 'facil', 'medio' ou 'dificil'
+  FALSE  -- TRUE = pergunta bônus
 )
+-- Se já existir uma pergunta com este id, em vez de dar erro ela é atualizada.
+-- EXCLUDED é a linha que se tentou inserir. ativo = TRUE reativa a pergunta,
+-- mesmo que ela tivesse sido desativada antes.
 ON CONFLICT (id) DO UPDATE SET
   categoria_id         = EXCLUDED.categoria_id,
   pergunta             = EXCLUDED.pergunta,
@@ -86,7 +141,16 @@ ON CONFLICT (id) DO UPDATE SET
   pergunta_bonus       = EXCLUDED.pergunta_bonus,
   ativo                = TRUE;
 
+-- (b) Tira a marcação de correta das alternativas antigas, evitando que duas fiquem
+-- corretas ao mesmo tempo se a resposta certa mudou de posição. O passo (c) define
+-- de novo qual é a correta.
 UPDATE opcoes_perguntas SET esta_correto = FALSE WHERE id_pergunta = 1 AND esta_correto;
+-- (c) Alternativas. v é uma tabela temporária com p = posição, t = texto e
+-- c = se é a correta.
+--   1º) o UPDATE (CTE 'atualiza') sobrescreve as alternativas que já existem nessa posição;
+--   2º) o INSERT final cria só as posições que ainda não existem (NOT EXISTS).
+-- Os dois rodam no mesmo comando e mexem em linhas diferentes, então não conflitam.
+-- A CTE 'atualiza' não é lida pelo INSERT; existe apenas para executar o UPDATE.
 WITH v (p, t, c) AS (VALUES
     (0, '`PRIMARY KEY`', true),
     (1, '`FOREIGN KEY`', false),
@@ -100,8 +164,11 @@ WITH v (p, t, c) AS (VALUES
 INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
 SELECT 1, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 1 AND o.posicao_pergunta = v.p);
+-- (d) Apaga alternativas fora das posições atuais, útil se a pergunta já teve
+-- mais alternativas em uma versão anterior.
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 1 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 2 | Modelagem e DDL | fácil | DROP TABLE remove tabela e dados
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   2,
@@ -141,6 +208,7 @@ SELECT 2, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 2 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 2 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 3 | Ferramentas | fácil | pgAdmin como ferramenta de administração
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   3,
@@ -180,6 +248,7 @@ SELECT 3, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 3 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 3 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 4 | Consultas SQL | médio | HAVING filtra grupos (x WHERE)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   4,
@@ -219,6 +288,7 @@ SELECT 4, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 4 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 4 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 5 | Consultas SQL | médio | LEFT JOIN
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   5,
@@ -258,6 +328,7 @@ SELECT 5, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 5 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 5 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 6 | Consultas SQL | médio | NULL = NULL resulta em NULL
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   6,
@@ -297,6 +368,7 @@ SELECT 6, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 6 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 6 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 7 | PostgreSQL | médio | índice padrão do CREATE INDEX (B-tree)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   7,
@@ -336,6 +408,7 @@ SELECT 7, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 7 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 7 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 8 | Transações | difícil | nível de isolamento padrão (READ COMMITTED)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   8,
@@ -375,6 +448,7 @@ SELECT 8, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 8 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 8 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 9 | Desempenho | difícil | EXPLAIN ANALYZE executa a consulta
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   9,
@@ -414,6 +488,7 @@ SELECT 9, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 9 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 9 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 10 | PostgreSQL | difícil | VACUUM e linhas mortas (MVCC)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   10,
@@ -453,6 +528,7 @@ SELECT 10, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 10 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 10 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 11 | Fundamentos de SQL | fácil | significado da sigla SQL
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   11,
@@ -492,6 +568,8 @@ SELECT 11, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 11 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 11 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 12 | Fundamentos de SQL | fácil | INSERT INTO
+-- (os '' dentro dos textos são apóstrofos escapados)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   12,
@@ -531,6 +609,7 @@ SELECT 12, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 12 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 12 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 13 | Consultas SQL | fácil | ORDER BY
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   13,
@@ -570,6 +649,7 @@ SELECT 13, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 13 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 13 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 14 | Fundamentos de SQL | fácil | UPDATE
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   14,
@@ -609,6 +689,7 @@ SELECT 14, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 14 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 14 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 15 | Consultas SQL | fácil | COUNT
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   15,
@@ -648,6 +729,7 @@ SELECT 15, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 15 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 15 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 16 | Consultas SQL | fácil | DISTINCT
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   16,
@@ -687,6 +769,7 @@ SELECT 16, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 16 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 16 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 17 | Ferramentas | fácil | Query Tool do pgAdmin
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   17,
@@ -726,6 +809,7 @@ SELECT 17, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 17 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 17 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 18 | PostgreSQL | fácil | porta padrão do PostgreSQL (5432)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   18,
@@ -765,6 +849,7 @@ SELECT 18, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 18 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 18 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 19 | Consultas SQL | médio | UNION ALL mantém duplicatas
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   19,
@@ -804,6 +889,8 @@ SELECT 19, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 19 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 19 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 20 | Consultas SQL | médio | COALESCE
+-- (os '' dentro dos textos são apóstrofos escapados)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   20,
@@ -843,6 +930,7 @@ SELECT 20, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 20 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 20 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 21 | Consultas SQL | médio | CTE com WITH
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   21,
@@ -882,6 +970,7 @@ SELECT 21, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 21 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 21 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 22 | Consultas SQL | médio | ROW_NUMBER() (função de janela)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   22,
@@ -921,6 +1010,7 @@ SELECT 22, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 22 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 22 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 23 | Modelagem e DDL | médio | UNIQUE aceita NULL
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   23,
@@ -960,6 +1050,7 @@ SELECT 23, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 23 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 23 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 24 | Modelagem e DDL | médio | ON DELETE CASCADE
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   24,
@@ -999,6 +1090,7 @@ SELECT 24, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 24 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 24 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 25 | Modelagem e DDL | médio | TRUNCATE
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   25,
@@ -1038,6 +1130,7 @@ SELECT 25, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 25 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 25 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 26 | Modelagem e DDL | médio | VIEW
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   26,
@@ -1077,6 +1170,7 @@ SELECT 26, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 26 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 26 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 27 | Modelagem e DDL | médio | Primeira Forma Normal (1FN)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   27,
@@ -1116,6 +1210,7 @@ SELECT 27, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 27 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 27 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 28 | Transações | médio | ACID: Durabilidade
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   28,
@@ -1155,6 +1250,7 @@ SELECT 28, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 28 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 28 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 29 | Ferramentas | médio | ERD Tool do pgAdmin
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   29,
@@ -1194,6 +1290,7 @@ SELECT 29, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 29 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 29 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 30 | Transações | médio | SAVEPOINT
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   30,
@@ -1233,6 +1330,7 @@ SELECT 30, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 30 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 30 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 31 | PostgreSQL | médio | tipo jsonb
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   31,
@@ -1272,6 +1370,8 @@ SELECT 31, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 31 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 31 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 32 | Consultas SQL | médio | ILIKE (LIKE sem diferenciar maiúsculas)
+-- (os '' dentro dos textos são apóstrofos escapados)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   32,
@@ -1311,6 +1411,8 @@ SELECT 32, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 32 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 32 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 33 | Desempenho | difícil | índice GIN (jsonb e arrays)
+-- (os '' dentro dos textos são apóstrofos escapados)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   33,
@@ -1350,6 +1452,7 @@ SELECT 33, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 33 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 33 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 34 | Transações | difícil | MVCC
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   34,
@@ -1389,6 +1492,7 @@ SELECT 34, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 34 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 34 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 35 | Transações | difícil | REPEATABLE READ
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   35,
@@ -1428,6 +1532,7 @@ SELECT 35, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 35 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 35 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 36 | Transações | difícil | deadlock
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   36,
@@ -1467,6 +1572,8 @@ SELECT 36, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 36 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 36 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 37 | Desempenho | difícil | índice parcial
+-- (os '' dentro dos textos são apóstrofos escapados)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   37,
@@ -1506,6 +1613,7 @@ SELECT 37, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 37 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 37 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 38 | Desempenho | difícil | INCLUDE (índice de cobertura)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   38,
@@ -1545,6 +1653,7 @@ SELECT 38, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 38 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 38 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 39 | PostgreSQL | difícil | WAL (Write-Ahead Log)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   39,
@@ -1584,6 +1693,7 @@ SELECT 39, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 39 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 39 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 40 | Ferramentas | difícil | pg_dump no formato plain
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   40,
@@ -1623,6 +1733,11 @@ SELECT 40, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 40 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 40 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- ----------------------------------------------------------------------------
+-- Perguntas bônus (41 a 45): categoria 'História da tecnologia', pergunta_bonus = TRUE
+-- ----------------------------------------------------------------------------
+
+-- Pergunta 41 | História da tecnologia | médio | bônus | ENIAC
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   41,
@@ -1662,6 +1777,7 @@ SELECT 41, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 41 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 41 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 42 | História da tecnologia | fácil | bônus | Tim Berners-Lee e a World Wide Web
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   42,
@@ -1701,6 +1817,7 @@ SELECT 42, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 42 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 42 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 43 | História da tecnologia | médio | bônus | o que Berners-Lee não criou (CSS)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   43,
@@ -1740,6 +1857,7 @@ SELECT 43, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 43 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 43 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 44 | História da tecnologia | difícil | bônus | mito do 'bug' e a mariposa (verdadeiro/falso)
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   44,
@@ -1775,8 +1893,10 @@ WITH v (p, t, c) AS (VALUES
 INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
 SELECT 44, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 44 AND o.posicao_pergunta = v.p);
+-- Só há 2 alternativas (Falsa/Verdadeira), por isso NOT IN (0, 1).
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 44 AND posicao_pergunta NOT IN (0, 1);
 
+-- Pergunta 45 | História da tecnologia | difícil | bônus | Creeper, primeiro vírus
 INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
 VALUES (
   45,
@@ -1817,4 +1937,8 @@ WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 45 AND 
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 45 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
 -- Mantém a sequência de ids alinhada com os ids inseridos manualmente.
+-- As perguntas entram com id explícito, o que não avança a sequência (autoincremento)
+-- da coluna. O setval leva a sequência até o maior id existente (aqui, 45), para que
+-- a próxima pergunta cadastrada sem informar id receba 46 em vez de tentar reutilizar
+-- um id já ocupado.
 SELECT setval(pg_get_serial_sequence('questao_quiz', 'id'), (SELECT MAX(id) FROM questao_quiz));
