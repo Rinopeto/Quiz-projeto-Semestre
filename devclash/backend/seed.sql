@@ -5,7 +5,7 @@
 --   1. categorias_perguntas : os temas das perguntas (ex.: 'Consultas SQL').
 --   2. fontes               : páginas de referência (documentação, Wikipédia...),
 --                             identificadas pela URL.
---   3. questao_quiz         : as 45 perguntas, cada uma com enunciado, explicação,
+--   3. questao_quiz         : as 50 perguntas, cada uma com enunciado, explicação,
 --                             fonte, dificuldade e indicação de pergunta bônus.
 --   4. opcoes_perguntas     : as alternativas de cada pergunta (4, ou 2 no
 --                             verdadeiro/falso), com a posição e qual é a correta.
@@ -20,7 +20,7 @@
 --
 -- CONVENÇÕES
 --   * dificuldade_pergunta: 'facil', 'medio' ou 'dificil'.
---   * pergunta_bonus: TRUE nas perguntas 41 a 45 (categoria 'História da tecnologia').
+--   * pergunta_bonus: TRUE nas perguntas 41 a 50 (categoria 'História da tecnologia').
 --   * posicao_pergunta: 0 a 3 (0 e 1 na pergunta de verdadeiro/falso). A posição da
 --     alternativa correta varia de uma pergunta para outra.
 --   * Nos textos, '' (duas aspas simples) é como o SQL escreve um apóstrofo literal.
@@ -97,7 +97,12 @@ FROM (VALUES
   ('CERN', 'https://home.cern/science/computing/the-birth-of-the-web/short-history-web/'),
   ('InfoEscola', 'https://www.infoescola.com/informatica/cascading-style-sheets-css/'),
   ('Educa Mais Brasil', 'https://www.educamaisbrasil.com.br/educacao/dicas/o-que-e-bug-qual-a-origem-da-expressao'),
-  ('CyberSec Brasil', 'https://www.cybersecbrazil.com.br/post/o-creeper-o-primeiro-v%C3%ADrus-de-computador-da-hist%C3%B3ria')
+  ('CyberSec Brasil', 'https://www.cybersecbrazil.com.br/post/o-creeper-o-primeiro-v%C3%ADrus-de-computador-da-hist%C3%B3ria'),
+  ('History of Science Museum — Universidade de Oxford', 'https://www.hsm.ox.ac.uk/imagining-ai'),
+  ('Linux Foundation — Leadership', 'https://www.linuxfoundation.org/about/leadership'),
+  ('Intel — The First Programmable Microprocessor: The 4004', 'https://timeline.intel.com/1971/the-first-programmable-microprocessor%3A-the-4004'),
+  ('Computer History Museum — First ARPANET Transmission', 'https://computerhistory.org/press-releases/museum-celebrates-arpanet-anniversary/'),
+  ('Computer History Museum — Invention of the Point-Contact Transistor', 'https://www.computerhistory.org/siliconengine/invention-of-the-point-contact-transistor/')
 ) AS v(nome, url)
 WHERE NOT EXISTS (SELECT 1 FROM fontes f WHERE f.url = v.url);
 
@@ -1936,9 +1941,209 @@ SELECT 45, v.p, v.t, v.c FROM v
 WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 45 AND o.posicao_pergunta = v.p);
 DELETE FROM opcoes_perguntas WHERE id_pergunta = 45 AND posicao_pergunta NOT IN (0, 1, 2, 3);
 
+-- Pergunta 46 | História da tecnologia | facil | bônus
+INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
+VALUES (
+  46,
+  (SELECT id FROM categorias_perguntas WHERE nome = 'História da tecnologia' ORDER BY id LIMIT 1),
+  'Quem publicou, em 1843, notas com um algoritmo para a Máquina Analítica de Charles Babbage?',
+  'Ada Lovelace publicou em 1843 notas sobre a Máquina Analítica de Charles Babbage, incluindo uma descrição detalhada de como calcular números de Bernoulli. Esse trabalho é frequentemente apresentado como um precursor da programação de computadores, embora a máquina ainda não tivesse sido construída.',
+  'History of Science Museum — Universidade de Oxford',
+  'https://www.hsm.ox.ac.uk/imagining-ai',
+  (SELECT id FROM fontes WHERE url = 'https://www.hsm.ox.ac.uk/imagining-ai' ORDER BY id LIMIT 1),
+  'facil',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  categoria_id         = EXCLUDED.categoria_id,
+  pergunta             = EXCLUDED.pergunta,
+  explicacao           = EXCLUDED.explicacao,
+  nome_fonte           = EXCLUDED.nome_fonte,
+  url_fonte            = EXCLUDED.url_fonte,
+  fonte_id             = EXCLUDED.fonte_id,
+  dificuldade_pergunta = EXCLUDED.dificuldade_pergunta,
+  pergunta_bonus       = EXCLUDED.pergunta_bonus,
+  ativo                = TRUE;
+
+UPDATE opcoes_perguntas SET esta_correto = FALSE WHERE id_pergunta = 46 AND esta_correto;
+WITH v (p, t, c) AS (VALUES
+    (0, 'Ada Lovelace', true),
+    (1, 'Grace Hopper', false),
+    (2, 'Alan Turing', false),
+    (3, 'Hedy Lamarr', false)
+), atualiza AS (
+  UPDATE opcoes_perguntas o SET alternativas = v.t, esta_correto = v.c
+  FROM v WHERE o.id_pergunta = 46 AND o.posicao_pergunta = v.p
+  RETURNING o.id
+)
+INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
+SELECT 46, v.p, v.t, v.c FROM v
+WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 46 AND o.posicao_pergunta = v.p);
+DELETE FROM opcoes_perguntas WHERE id_pergunta = 46 AND posicao_pergunta NOT IN (0, 1, 2, 3);
+
+-- Pergunta 47 | História da tecnologia | facil | bônus
+INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
+VALUES (
+  47,
+  (SELECT id FROM categorias_perguntas WHERE nome = 'História da tecnologia' ORDER BY id LIMIT 1),
+  'Quem anunciou, em 1991, o desenvolvimento do núcleo (kernel) Linux?',
+  'Linus Torvalds anunciou em agosto de 1991 que estava desenvolvendo o kernel Linux. O núcleo se tornou a base de muitos sistemas operacionais e projetos de código aberto. Dennis Ritchie participou da criação do Unix e da linguagem C, não do kernel Linux.',
+  'Linux Foundation — Leadership',
+  'https://www.linuxfoundation.org/about/leadership',
+  (SELECT id FROM fontes WHERE url = 'https://www.linuxfoundation.org/about/leadership' ORDER BY id LIMIT 1),
+  'facil',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  categoria_id         = EXCLUDED.categoria_id,
+  pergunta             = EXCLUDED.pergunta,
+  explicacao           = EXCLUDED.explicacao,
+  nome_fonte           = EXCLUDED.nome_fonte,
+  url_fonte            = EXCLUDED.url_fonte,
+  fonte_id             = EXCLUDED.fonte_id,
+  dificuldade_pergunta = EXCLUDED.dificuldade_pergunta,
+  pergunta_bonus       = EXCLUDED.pergunta_bonus,
+  ativo                = TRUE;
+
+UPDATE opcoes_perguntas SET esta_correto = FALSE WHERE id_pergunta = 47 AND esta_correto;
+WITH v (p, t, c) AS (VALUES
+    (0, 'Bill Gates', false),
+    (1, 'Linus Torvalds', true),
+    (2, 'Steve Jobs', false),
+    (3, 'Dennis Ritchie', false)
+), atualiza AS (
+  UPDATE opcoes_perguntas o SET alternativas = v.t, esta_correto = v.c
+  FROM v WHERE o.id_pergunta = 47 AND o.posicao_pergunta = v.p
+  RETURNING o.id
+)
+INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
+SELECT 47, v.p, v.t, v.c FROM v
+WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 47 AND o.posicao_pergunta = v.p);
+DELETE FROM opcoes_perguntas WHERE id_pergunta = 47 AND posicao_pergunta NOT IN (0, 1, 2, 3);
+
+-- Pergunta 48 | História da tecnologia | medio | bônus
+INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
+VALUES (
+  48,
+  (SELECT id FROM categorias_perguntas WHERE nome = 'História da tecnologia' ORDER BY id LIMIT 1),
+  'O Intel 4004, lançado em 1971, foi originalmente desenvolvido para qual tipo de equipamento?',
+  'O Intel 4004 surgiu de um projeto encomendado pela fabricante japonesa Busicom para suas calculadoras. Lançado em 1971, tornou-se um marco por reunir em um único chip funções de processamento que antes exigiam circuitos maiores.',
+  'Intel — The First Programmable Microprocessor: The 4004',
+  'https://timeline.intel.com/1971/the-first-programmable-microprocessor%3A-the-4004',
+  (SELECT id FROM fontes WHERE url = 'https://timeline.intel.com/1971/the-first-programmable-microprocessor%3A-the-4004' ORDER BY id LIMIT 1),
+  'medio',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  categoria_id         = EXCLUDED.categoria_id,
+  pergunta             = EXCLUDED.pergunta,
+  explicacao           = EXCLUDED.explicacao,
+  nome_fonte           = EXCLUDED.nome_fonte,
+  url_fonte            = EXCLUDED.url_fonte,
+  fonte_id             = EXCLUDED.fonte_id,
+  dificuldade_pergunta = EXCLUDED.dificuldade_pergunta,
+  pergunta_bonus       = EXCLUDED.pergunta_bonus,
+  ativo                = TRUE;
+
+UPDATE opcoes_perguntas SET esta_correto = FALSE WHERE id_pergunta = 48 AND esta_correto;
+WITH v (p, t, c) AS (VALUES
+    (0, 'Videogames domésticos', false),
+    (1, 'Satélites de comunicação', false),
+    (2, 'Calculadoras da Busicom', true),
+    (3, 'Telefones celulares', false)
+), atualiza AS (
+  UPDATE opcoes_perguntas o SET alternativas = v.t, esta_correto = v.c
+  FROM v WHERE o.id_pergunta = 48 AND o.posicao_pergunta = v.p
+  RETURNING o.id
+)
+INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
+SELECT 48, v.p, v.t, v.c FROM v
+WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 48 AND o.posicao_pergunta = v.p);
+DELETE FROM opcoes_perguntas WHERE id_pergunta = 48 AND posicao_pergunta NOT IN (0, 1, 2, 3);
+
+-- Pergunta 49 | História da tecnologia | medio | bônus
+INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
+VALUES (
+  49,
+  (SELECT id FROM categorias_perguntas WHERE nome = 'História da tecnologia' ORDER BY id LIMIT 1),
+  'Qual foi a primeira sequência de letras recebida pela ARPANET em 29 de outubro de 1969?',
+  'A equipe da UCLA tentou enviar o comando LOGIN para um computador do Stanford Research Institute. O sistema caiu após a recepção das letras LO. A conexão foi restabelecida e o comando completo foi enviado mais tarde naquela noite.',
+  'Computer History Museum — First ARPANET Transmission',
+  'https://computerhistory.org/press-releases/museum-celebrates-arpanet-anniversary/',
+  (SELECT id FROM fontes WHERE url = 'https://computerhistory.org/press-releases/museum-celebrates-arpanet-anniversary/' ORDER BY id LIMIT 1),
+  'medio',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  categoria_id         = EXCLUDED.categoria_id,
+  pergunta             = EXCLUDED.pergunta,
+  explicacao           = EXCLUDED.explicacao,
+  nome_fonte           = EXCLUDED.nome_fonte,
+  url_fonte            = EXCLUDED.url_fonte,
+  fonte_id             = EXCLUDED.fonte_id,
+  dificuldade_pergunta = EXCLUDED.dificuldade_pergunta,
+  pergunta_bonus       = EXCLUDED.pergunta_bonus,
+  ativo                = TRUE;
+
+UPDATE opcoes_perguntas SET esta_correto = FALSE WHERE id_pergunta = 49 AND esta_correto;
+WITH v (p, t, c) AS (VALUES
+    (0, 'WWW', false),
+    (1, 'HELLO', false),
+    (2, 'TCP', false),
+    (3, 'LO', true)
+), atualiza AS (
+  UPDATE opcoes_perguntas o SET alternativas = v.t, esta_correto = v.c
+  FROM v WHERE o.id_pergunta = 49 AND o.posicao_pergunta = v.p
+  RETURNING o.id
+)
+INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
+SELECT 49, v.p, v.t, v.c FROM v
+WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 49 AND o.posicao_pergunta = v.p);
+DELETE FROM opcoes_perguntas WHERE id_pergunta = 49 AND posicao_pergunta NOT IN (0, 1, 2, 3);
+
+-- Pergunta 50 | História da tecnologia | dificil | bônus
+INSERT INTO questao_quiz (id, categoria_id, pergunta, explicacao, nome_fonte, url_fonte, fonte_id, dificuldade_pergunta, pergunta_bonus)
+VALUES (
+  50,
+  (SELECT id FROM categorias_perguntas WHERE nome = 'História da tecnologia' ORDER BY id LIMIT 1),
+  'Quais pesquisadores demonstraram o primeiro transistor de contato pontual funcional no Bell Labs, em dezembro de 1947?',
+  'John Bardeen e Walter Brattain demonstraram em dezembro de 1947 um dispositivo semicondutor de contato pontual que amplificava sinais elétricos. O trabalho ocorreu no Bell Labs, em um grupo liderado por William Shockley, e ajudou a inaugurar a era dos transistores.',
+  'Computer History Museum — Invention of the Point-Contact Transistor',
+  'https://www.computerhistory.org/siliconengine/invention-of-the-point-contact-transistor/',
+  (SELECT id FROM fontes WHERE url = 'https://www.computerhistory.org/siliconengine/invention-of-the-point-contact-transistor/' ORDER BY id LIMIT 1),
+  'dificil',
+  TRUE
+)
+ON CONFLICT (id) DO UPDATE SET
+  categoria_id         = EXCLUDED.categoria_id,
+  pergunta             = EXCLUDED.pergunta,
+  explicacao           = EXCLUDED.explicacao,
+  nome_fonte           = EXCLUDED.nome_fonte,
+  url_fonte            = EXCLUDED.url_fonte,
+  fonte_id             = EXCLUDED.fonte_id,
+  dificuldade_pergunta = EXCLUDED.dificuldade_pergunta,
+  pergunta_bonus       = EXCLUDED.pergunta_bonus,
+  ativo                = TRUE;
+
+UPDATE opcoes_perguntas SET esta_correto = FALSE WHERE id_pergunta = 50 AND esta_correto;
+WITH v (p, t, c) AS (VALUES
+    (0, 'Steve Wozniak e Steve Jobs', false),
+    (1, 'John Bardeen e Walter Brattain', true),
+    (2, 'Tim Berners-Lee e Robert Cailliau', false),
+    (3, 'Robert Noyce e Jack Kilby', false)
+), atualiza AS (
+  UPDATE opcoes_perguntas o SET alternativas = v.t, esta_correto = v.c
+  FROM v WHERE o.id_pergunta = 50 AND o.posicao_pergunta = v.p
+  RETURNING o.id
+)
+INSERT INTO opcoes_perguntas (id_pergunta, posicao_pergunta, alternativas, esta_correto)
+SELECT 50, v.p, v.t, v.c FROM v
+WHERE NOT EXISTS (SELECT 1 FROM opcoes_perguntas o WHERE o.id_pergunta = 50 AND o.posicao_pergunta = v.p);
+DELETE FROM opcoes_perguntas WHERE id_pergunta = 50 AND posicao_pergunta NOT IN (0, 1, 2, 3);
+
 -- Mantém a sequência de ids alinhada com os ids inseridos manualmente.
 -- As perguntas entram com id explícito, o que não avança a sequência (autoincremento)
--- da coluna. O setval leva a sequência até o maior id existente (aqui, 45), para que
--- a próxima pergunta cadastrada sem informar id receba 46 em vez de tentar reutilizar
+-- da coluna. O setval leva a sequência até o maior id existente (aqui, 50), para que
+-- a próxima pergunta cadastrada sem informar id receba 51 em vez de tentar reutilizar
 -- um id já ocupado.
 SELECT setval(pg_get_serial_sequence('questao_quiz', 'id'), (SELECT MAX(id) FROM questao_quiz));
