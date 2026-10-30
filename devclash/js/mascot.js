@@ -285,8 +285,51 @@ const claudinho = (() => {
     }
   }
 
+  /* ---------- Acompanha o mouse quando ele se aproxima (somente desktop) ---------- */
+  // A distância é medida a partir da posição fixa do mascote, para evitar
+  // oscilações enquanto o SVG se desloca. Não altera as reações nem os cliques.
+  const wrapper = document.getElementById("claudinho-wrap");
+  if (wrapper && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    const FOLLOW_RADIUS = 350; // distância máxima para começar a acompanhar
+    const MAX_SHIFT = 55; // deslocamento máximo, em pixels
+
+    function resetFollow() {
+      root.style.setProperty("--cl-follow-x", "0px");
+      root.style.setProperty("--cl-follow-y", "0px");
+    }
+
+    document.addEventListener("pointermove", (event) => {
+      if (reduceMotion() || event.pointerType === "touch") {
+        resetFollow();
+        return;
+      }
+
+      // O wrapper permanece imóvel, mesmo enquanto o desenho se desloca.
+      const rect = wrapper.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+      const distance = Math.hypot(dx, dy);
+
+      if (distance >= FOLLOW_RADIUS) {
+        resetFollow();
+        return;
+      }
+
+      // Reduz o movimento gradualmente perto da borda do raio de ativação.
+      const fade = Math.min(1, (FOLLOW_RADIUS - distance) / 90);
+      const shiftX = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, dx * 0.32)) * fade;
+      const shiftY = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, dy * 0.32)) * fade;
+      root.style.setProperty("--cl-follow-x", `${shiftX.toFixed(1)}px`);
+      root.style.setProperty("--cl-follow-y", `${shiftY.toFixed(1)}px`);
+    }, { passive: true });
+
+    document.addEventListener("pointerleave", resetFollow);
+    window.addEventListener("blur", resetFollow);
+  }
+
   setMood("idle");
   scheduleBlink();
 
   return { onScreen, onQuestion, onTimeWarning, onAnswer, onResult };
 })();
+
