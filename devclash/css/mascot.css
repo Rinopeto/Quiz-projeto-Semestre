@@ -8,7 +8,7 @@
    "right" por "left" aqui e no @media abaixo. pointer-events: none deixa os cliques
    passarem pelo mascote, então ele nunca atrapalha os botões. */
 .claudinho-wrap {
-  --cl-w: 128px;
+  --cl-w: 200px;
   position: fixed;
   right: 16px;
   bottom: 10px;
@@ -23,6 +23,9 @@
   width: 100%;
   height: auto;
   overflow: visible; /* deixa o pulo passar da borda do desenho */
+  /* Deslocamento suave em direção ao cursor; não afeta as animações internas. */
+  transform: translate3d(var(--cl-follow-x, 0px), var(--cl-follow-y, 0px), 0);
+  transition: transform 0.18s ease-out;
 }
 
 /* Balão de fala (mesmas cores da "tela" do robô) */
@@ -155,6 +158,7 @@
 @media (prefers-reduced-motion: reduce) {
   .claudinho *,
   .claudinho-bubble { animation: none !important; transition: none !important; }
+  .claudinho { transform: none !important; transition: none !important; }
 }
 
 @media print {
