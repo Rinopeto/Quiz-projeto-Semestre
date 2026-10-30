@@ -513,6 +513,66 @@ const LOCAL_QUESTIONS = [
     explanation: "O Creeper foi criado em 1971 por Bob Thomas, como um experimento: um programa que passava de computador em computador na ARPANET exibindo uma mensagem provocativa. Depois surgiu o Reaper, feito para removê-lo. O Brain, de 1986, é considerado o primeiro vírus para PCs.",
     sourceName: "CyberSec Brasil",
     sourceUrl: "https://www.cybersecbrazil.com.br/post/o-creeper-o-primeiro-v%C3%ADrus-de-computador-da-hist%C3%B3ria"
+  },
+  {
+    id: 46,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "facil",
+    question: "Quem publicou, em 1843, notas com um algoritmo para a Máquina Analítica de Charles Babbage?",
+    options: ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Hedy Lamarr"],
+    correctAnswer: 0,
+    explanation: "Ada Lovelace publicou em 1843 notas sobre a Máquina Analítica de Charles Babbage, incluindo uma descrição detalhada de como calcular números de Bernoulli. Esse trabalho é frequentemente apresentado como um precursor da programação de computadores, embora a máquina ainda não tivesse sido construída.",
+    sourceName: "History of Science Museum — Universidade de Oxford",
+    sourceUrl: "https://www.hsm.ox.ac.uk/imagining-ai"
+  },
+  {
+    id: 47,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "facil",
+    question: "Quem anunciou, em 1991, o desenvolvimento do núcleo (kernel) Linux?",
+    options: ["Bill Gates", "Linus Torvalds", "Steve Jobs", "Dennis Ritchie"],
+    correctAnswer: 1,
+    explanation: "Linus Torvalds anunciou em agosto de 1991 que estava desenvolvendo o kernel Linux. O núcleo se tornou a base de muitos sistemas operacionais e projetos de código aberto. Dennis Ritchie participou da criação do Unix e da linguagem C, não do kernel Linux.",
+    sourceName: "Linux Foundation — Leadership",
+    sourceUrl: "https://www.linuxfoundation.org/about/leadership"
+  },
+  {
+    id: 48,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "medio",
+    question: "O Intel 4004, lançado em 1971, foi originalmente desenvolvido para qual tipo de equipamento?",
+    options: ["Videogames domésticos", "Satélites de comunicação", "Calculadoras da Busicom", "Telefones celulares"],
+    correctAnswer: 2,
+    explanation: "O Intel 4004 surgiu de um projeto encomendado pela fabricante japonesa Busicom para suas calculadoras. Lançado em 1971, tornou-se um marco por reunir em um único chip funções de processamento que antes exigiam circuitos maiores.",
+    sourceName: "Intel — The First Programmable Microprocessor: The 4004",
+    sourceUrl: "https://timeline.intel.com/1971/the-first-programmable-microprocessor%3A-the-4004"
+  },
+  {
+    id: 49,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "medio",
+    question: "Qual foi a primeira sequência de letras recebida pela ARPANET em 29 de outubro de 1969?",
+    options: ["WWW", "HELLO", "TCP", "LO"],
+    correctAnswer: 3,
+    explanation: "A equipe da UCLA tentou enviar o comando LOGIN para um computador do Stanford Research Institute. O sistema caiu após a recepção das letras LO. A conexão foi restabelecida e o comando completo foi enviado mais tarde naquela noite.",
+    sourceName: "Computer History Museum — First ARPANET Transmission",
+    sourceUrl: "https://computerhistory.org/press-releases/museum-celebrates-arpanet-anniversary/"
+  },
+  {
+    id: 50,
+    bonus: true,
+    category: "História da tecnologia",
+    difficulty: "dificil",
+    question: "Quais pesquisadores demonstraram o primeiro transistor de contato pontual funcional no Bell Labs, em dezembro de 1947?",
+    options: ["Steve Wozniak e Steve Jobs", "John Bardeen e Walter Brattain", "Tim Berners-Lee e Robert Cailliau", "Robert Noyce e Jack Kilby"],
+    correctAnswer: 1,
+    explanation: "John Bardeen e Walter Brattain demonstraram em dezembro de 1947 um dispositivo semicondutor de contato pontual que amplificava sinais elétricos. O trabalho ocorreu no Bell Labs, em um grupo liderado por William Shockley, e ajudou a inaugurar a era dos transistores.",
+    sourceName: "Computer History Museum — Invention of the Point-Contact Transistor",
+    sourceUrl: "https://www.computerhistory.org/siliconengine/invention-of-the-point-contact-transistor/"
   }
 ];
 
