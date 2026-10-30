@@ -107,9 +107,11 @@
 .claudinho[data-arm="down"] .cl-arm-up,
 .claudinho[data-arm="up"] .cl-arm-down { display: none; }
 
-/* Apenas as pupilas acompanham o cursor. Corpo, cabeça e braços ficam no lugar. */
-.claudinho .cl-pupils {
-  fill: #1b1340;
+/* Apenas a parte verde dos olhos acompanha o cursor. Corpo, cabeça e braços ficam no lugar. */
+.claudinho .cl-eyes-open,
+.claudinho .cl-eyes-wow {
+  transform-box: fill-box;
+  transform-origin: center;
   transform: translate(var(--cl-gaze-x, 0px), var(--cl-gaze-y, 0px));
   transition: transform 0.16s ease-out;
 }
@@ -162,7 +164,8 @@
 @media (prefers-reduced-motion: reduce) {
   .claudinho *,
   .claudinho-bubble { animation: none !important; transition: none !important; }
-  .claudinho .cl-pupils { transform: none !important; transition: none !important; }
+  .claudinho .cl-eyes-open,
+  .claudinho .cl-eyes-wow { transform: none !important; transition: none !important; }
 }
 
 @media print {
