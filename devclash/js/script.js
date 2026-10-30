@@ -8,8 +8,8 @@ const CONFIG = {
   WARNING_SECONDS: 10,
   MAX_POINTS_PER_QUESTION: 10,
   WRONG_ANSWER_POINTS: 1, // resposta errada vale 1 ponto; tempo esgotado vale 0
-  QUESTIONS_PER_GAME: 45, // quantas perguntas sorteadas por partida (0 = todas)
-  SORT_BY_DIFFICULTY: true, // dentro da partida, vai do fácil ao difícil (a ordem é sorteada dentro de cada nível)
+  QUESTIONS_PER_GAME: 50, // quantas perguntas sorteadas por partida (0 = todas)
+  SORT_BY_DIFFICULTY: true, // perguntas normais do fácil ao difícil; bônus sempre ficam para o final
   SHUFFLE_OPTIONS: true, // embaralha a ordem das alternativas
   RANKING_LIMIT: 10,
   OPTION_LABELS: ["A", "B", "C", "D", "E", "F"]
@@ -67,7 +67,7 @@ function prepareQuestions(rawQuestions) {
   const limited = CONFIG.QUESTIONS_PER_GAME ? picked.slice(0, CONFIG.QUESTIONS_PER_GAME) : picked;
   if (CONFIG.SORT_BY_DIFFICULTY) {
     const levelOf = (q) => (DIFFICULTIES[q.difficulty] ? DIFFICULTIES[q.difficulty].level : 2);
-    limited.sort((a, b) => levelOf(a) - levelOf(b)); // sort estável: mantém o sorteio dentro de cada nível
+    limited.sort((a, b) => Number(Boolean(a.bonus)) - Number(Boolean(b.bonus)) || levelOf(a) - levelOf(b)); // bônus após todas as normais, inclusive as difíceis
   }
   return limited.map((q) => {
     const options = q.options.map((text, originalIndex) => ({ text, originalIndex }));
