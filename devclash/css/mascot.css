@@ -23,9 +23,6 @@
   width: 100%;
   height: auto;
   overflow: visible; /* deixa o pulo passar da borda do desenho */
-  /* Deslocamento suave em direção ao cursor; não afeta as animações internas. */
-  transform: translate3d(var(--cl-follow-x, 0px), var(--cl-follow-y, 0px), 0);
-  transition: transform 0.18s ease-out;
 }
 
 /* Balão de fala (mesmas cores da "tela" do robô) */
@@ -110,6 +107,13 @@
 .claudinho[data-arm="down"] .cl-arm-up,
 .claudinho[data-arm="up"] .cl-arm-down { display: none; }
 
+/* Apenas as pupilas acompanham o cursor. Corpo, cabeça e braços ficam no lugar. */
+.claudinho .cl-pupils {
+  fill: #1b1340;
+  transform: translate(var(--cl-gaze-x, 0px), var(--cl-gaze-y, 0px));
+  transition: transform 0.16s ease-out;
+}
+
 /* Animações contínuas (parado) */
 .cl-bob { animation: cl-bob 2.4s ease-in-out infinite; }
 .cl-shadow { transform-box: fill-box; transform-origin: center; animation: cl-shadow 2.4s ease-in-out infinite; }
@@ -158,7 +162,7 @@
 @media (prefers-reduced-motion: reduce) {
   .claudinho *,
   .claudinho-bubble { animation: none !important; transition: none !important; }
-  .claudinho { transform: none !important; transition: none !important; }
+  .claudinho .cl-pupils { transform: none !important; transition: none !important; }
 }
 
 @media print {
