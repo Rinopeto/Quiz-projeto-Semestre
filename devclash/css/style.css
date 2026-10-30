@@ -513,3 +513,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Logo opcional do DevClash: coloque assets/logo.png */
+.brand-group { display: flex; align-items: center; gap: 10px; }
+.brand-logo { width: 42px; height: 42px; object-fit: contain; flex-shrink: 0; }
+.brand-logo[hidden] { display: none; }
