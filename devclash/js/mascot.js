@@ -285,32 +285,11 @@ const claudinho = (() => {
     }
   }
 
-  /* ---------- Olhar acompanha o mouse; o corpo permanece parado ---------- */
-  // Os olhos são partes do SVG original. As pupilas são criadas aqui para
-  // não precisar alterar o HTML nem afetar as expressões do Claudinho.
-  const svgNS = "http://www.w3.org/2000/svg";
-  function createPupils(selector, y, radiusX, radiusY) {
-    const eyes = root.querySelector(selector);
-    if (!eyes) return;
-    const pupils = document.createElementNS(svgNS, "g");
-    pupils.setAttribute("class", "cl-pupils");
-    [130, 190].forEach((x) => {
-      const pupil = document.createElementNS(svgNS, "ellipse");
-      pupil.setAttribute("cx", String(x));
-      pupil.setAttribute("cy", String(y));
-      pupil.setAttribute("rx", String(radiusX));
-      pupil.setAttribute("ry", String(radiusY));
-      pupils.appendChild(pupil);
-    });
-    eyes.appendChild(pupils);
-  }
-  createPupils(".cl-eyes-open", 112, 3.5, 5);
-  createPupils(".cl-eyes-wow", 110, 4.5, 6);
-
+  /* ---------- Olhar acompanha o mouse; move apenas a parte verde dos olhos ---------- */
   if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
     const LOOK_RADIUS = 450; // reage apenas com o cursor nas proximidades
-    const MAX_X = 5; // deslocamento das pupilas dentro dos olhos (em unidades SVG)
-    const MAX_Y = 6;
+    const MAX_X = 4.5; // deslocamento máximo do olho verde (em unidades SVG)
+    const MAX_Y = 5;
 
     function resetGaze() {
       root.style.setProperty("--cl-gaze-x", "0px");
@@ -323,7 +302,6 @@ const claudinho = (() => {
         return;
       }
 
-      // O SVG inteiro não se move, então seu centro permanece estável.
       const rect = root.getBoundingClientRect();
       const dx = event.clientX - (rect.left + rect.width / 2);
       const dy = event.clientY - (rect.top + rect.height * 0.38);
@@ -333,7 +311,7 @@ const claudinho = (() => {
         return;
       }
 
-      // Quanto mais próximo o ponteiro, maior o desvio; sem sair dos olhos.
+      // Quanto mais próximo o ponteiro, maior o desvio; sem sair do rosto.
       const intensity = Math.min(1, (LOOK_RADIUS - distance) / 120);
       const gazeX = Math.max(-1, Math.min(1, dx / 95)) * MAX_X * intensity;
       const gazeY = Math.max(-1, Math.min(1, dy / 95)) * MAX_Y * intensity;
