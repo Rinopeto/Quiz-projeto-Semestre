@@ -285,46 +285,64 @@ const claudinho = (() => {
     }
   }
 
-  /* ---------- Acompanha o mouse quando ele se aproxima (somente desktop) ---------- */
-  // A distância é medida a partir da posição fixa do mascote, para evitar
-  // oscilações enquanto o SVG se desloca. Não altera as reações nem os cliques.
-  const wrapper = document.getElementById("claudinho-wrap");
-  if (wrapper && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-    const FOLLOW_RADIUS = 350; // distância máxima para começar a acompanhar
-    const MAX_SHIFT = 55; // deslocamento máximo, em pixels
+  /* ---------- Olhar acompanha o mouse; o corpo permanece parado ---------- */
+  // Os olhos são partes do SVG original. As pupilas são criadas aqui para
+  // não precisar alterar o HTML nem afetar as expressões do Claudinho.
+  const svgNS = "http://www.w3.org/2000/svg";
+  function createPupils(selector, y, radiusX, radiusY) {
+    const eyes = root.querySelector(selector);
+    if (!eyes) return;
+    const pupils = document.createElementNS(svgNS, "g");
+    pupils.setAttribute("class", "cl-pupils");
+    [130, 190].forEach((x) => {
+      const pupil = document.createElementNS(svgNS, "ellipse");
+      pupil.setAttribute("cx", String(x));
+      pupil.setAttribute("cy", String(y));
+      pupil.setAttribute("rx", String(radiusX));
+      pupil.setAttribute("ry", String(radiusY));
+      pupils.appendChild(pupil);
+    });
+    eyes.appendChild(pupils);
+  }
+  createPupils(".cl-eyes-open", 112, 3.5, 5);
+  createPupils(".cl-eyes-wow", 110, 4.5, 6);
 
-    function resetFollow() {
-      root.style.setProperty("--cl-follow-x", "0px");
-      root.style.setProperty("--cl-follow-y", "0px");
+  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    const LOOK_RADIUS = 450; // reage apenas com o cursor nas proximidades
+    const MAX_X = 5; // deslocamento das pupilas dentro dos olhos (em unidades SVG)
+    const MAX_Y = 6;
+
+    function resetGaze() {
+      root.style.setProperty("--cl-gaze-x", "0px");
+      root.style.setProperty("--cl-gaze-y", "0px");
     }
 
     document.addEventListener("pointermove", (event) => {
       if (reduceMotion() || event.pointerType === "touch") {
-        resetFollow();
+        resetGaze();
         return;
       }
 
-      // O wrapper permanece imóvel, mesmo enquanto o desenho se desloca.
-      const rect = wrapper.getBoundingClientRect();
+      // O SVG inteiro não se move, então seu centro permanece estável.
+      const rect = root.getBoundingClientRect();
       const dx = event.clientX - (rect.left + rect.width / 2);
-      const dy = event.clientY - (rect.top + rect.height / 2);
+      const dy = event.clientY - (rect.top + rect.height * 0.38);
       const distance = Math.hypot(dx, dy);
-
-      if (distance >= FOLLOW_RADIUS) {
-        resetFollow();
+      if (distance >= LOOK_RADIUS) {
+        resetGaze();
         return;
       }
 
-      // Reduz o movimento gradualmente perto da borda do raio de ativação.
-      const fade = Math.min(1, (FOLLOW_RADIUS - distance) / 90);
-      const shiftX = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, dx * 0.32)) * fade;
-      const shiftY = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, dy * 0.32)) * fade;
-      root.style.setProperty("--cl-follow-x", `${shiftX.toFixed(1)}px`);
-      root.style.setProperty("--cl-follow-y", `${shiftY.toFixed(1)}px`);
+      // Quanto mais próximo o ponteiro, maior o desvio; sem sair dos olhos.
+      const intensity = Math.min(1, (LOOK_RADIUS - distance) / 120);
+      const gazeX = Math.max(-1, Math.min(1, dx / 95)) * MAX_X * intensity;
+      const gazeY = Math.max(-1, Math.min(1, dy / 95)) * MAX_Y * intensity;
+      root.style.setProperty("--cl-gaze-x", `${gazeX.toFixed(2)}px`);
+      root.style.setProperty("--cl-gaze-y", `${gazeY.toFixed(2)}px`);
     }, { passive: true });
 
-    document.addEventListener("pointerleave", resetFollow);
-    window.addEventListener("blur", resetFollow);
+    document.addEventListener("pointerleave", resetGaze);
+    window.addEventListener("blur", resetGaze);
   }
 
   setMood("idle");
@@ -332,4 +350,3 @@ const claudinho = (() => {
 
   return { onScreen, onQuestion, onTimeWarning, onAnswer, onResult };
 })();
-
