@@ -84,8 +84,8 @@ function validateMatch(body) {
   if (!body || typeof body !== "object") return { error: "Corpo da requisição inválido." };
 
   const playerName = typeof body.playerName === "string" ? body.playerName.trim() : "";
-  if (playerName.length < 1 || playerName.length > NAME_MAX) {
-    return { error: `playerName deve ter de 1 a ${NAME_MAX} caracteres.` };
+  if (playerName.length < 1 || playerName.length > NAME_MAX || /[\x00-\x1F\x7F-\x9F]/.test(playerName)) {
+    return { error: `playerName deve ter de 1 a ${NAME_MAX} caracteres, sem caracteres de controle.` };
   }
 
   if (!Array.isArray(body.answers) || body.answers.length < 1 || body.answers.length > MAX_ANSWERS) {
