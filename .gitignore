@@ -1,1 +1,6 @@
 node_modules/
+
+# Credenciais e configuracoes locais: nunca publicar no Git.
+.env
+.env.*
+!.env.example
