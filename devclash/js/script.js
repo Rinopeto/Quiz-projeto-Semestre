@@ -375,19 +375,17 @@ function renderSelection(originalIndex) {
 
 function renderSource(question) {
   const url = question.sourceUrl || question.source;
-  if (!url) {
+  let safeUrl;
+  try {
+    safeUrl = new URL(url);
+    if (safeUrl.protocol !== "https:" && safeUrl.protocol !== "http:") throw new Error("Protocolo inválido");
+  } catch (err) {
     ui.source.hidden = true;
+    ui.sourceLink.removeAttribute("href");
     return;
   }
-  let label = question.sourceName || url;
-  if (!question.sourceName) {
-    try {
-      label = new URL(url).hostname.replace(/^www\./, "");
-    } catch (err) {
-      // URL inválida: mostra o texto original
-    }
-  }
-  ui.sourceLink.href = url;
+  const label = question.sourceName || safeUrl.hostname.replace(/^www\./, "");
+  ui.sourceLink.href = safeUrl.href;
   ui.sourceLink.textContent = label;
   ui.source.hidden = false;
 }
@@ -653,11 +651,14 @@ async function startQuiz() {
   }
 }
 
-// RQ01: o jogador informa o nome antes de iniciar.
+// RQ01: o jogador informa um nome válido antes de iniciar.
+function isValidPlayerName(name) {
+  return name.length >= 1 && name.length <= 20 && !/[\x00-\x1F\x7F-\x9F]/.test(name);
+}
 function updateStartButton() {
-  const hasName = ui.playerName.value.trim() !== "";
-  ui.startBtn.disabled = !hasName;
-  ui.nameHint.hidden = hasName;
+  const hasValidName = isValidPlayerName(ui.playerName.value.trim());
+  ui.startBtn.disabled = !hasValidName;
+  ui.nameHint.hidden = hasValidName;
 }
 
 // "Encerrar agora": termina a partida e mostra o resultado com as respostas dadas até aqui.
@@ -680,7 +681,7 @@ function goToStart() {
 
 function handleStart() {
   const name = ui.playerName.value.trim();
-  if (!name) return;
+  if (!isValidPlayerName(name)) return;
   state.playerName = name;
   startQuiz();
 }
