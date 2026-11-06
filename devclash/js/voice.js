@@ -1,23 +1,13 @@
 "use strict";
 
 /*
- * Voz do Claudinho.
- *
- * As amostras foram extraídas do áudio fornecido para o projeto e ficam em audio/voz_claudinho/.
- * São sons robóticos não verbais: as frases continuam legíveis no balão do mascote.
- *
- * A interface é a mesma usada por js/mascot.js (speak, cancel, setEnabled,
- * isEnabled e supported), sem alterações nos eventos ou na lógica do quiz.
- * Por segurança, o navegador pode bloquear a saudação sonora antes do primeiro clique.
+ * Voz do Claudinho usando o leitor de texto nativo do navegador (Web Speech API).
+ * Preserva a interface esperada por mascot.js: speak, cancel, setEnabled,
+ * isEnabled e supported. Nenhum arquivo de áudio externo é necessário.
  */
 const claudinhoVoice = (() => {
   const STORAGE_KEY = "devclash:voice";
-  const supported = typeof window.Audio === "function"
-    && Boolean(new window.Audio().canPlayType("audio/mpeg"));
-
-  // Quantidade de trechos separados por duração. Arquivos locais, sem serviço externo.
-  const CLIP_COUNTS = { short: 18, medium: 35, long: 16 };
-  const lastClip = { short: 0, medium: 0, long: 0 };
+  const supported = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 
   let enabled = true;
   try {
@@ -26,67 +16,61 @@ const claudinhoVoice = (() => {
     // Sem localStorage, a preferência vale somente nesta visita.
   }
 
-  let currentAudio = null;
-  let currentId = 0; // ignora callbacks de falas anteriores que foram interrompidas
+  let currentId = 0;
+  let currentUtterance = null;
 
-  function chooseClip(text) {
-    // Frases curtas usam sons curtos; frases longas usam balbucios mais compridos.
-    const type = text.length <= 15 ? "short" : text.length <= 35 ? "medium" : "long";
-    const total = CLIP_COUNTS[type];
-    let number = 1 + Math.floor(Math.random() * total);
-    // Evita repetir a mesma amostra em duas falas seguidas da mesma duração.
-    if (total > 1 && number === lastClip[type]) number = (number % total) + 1;
-    lastClip[type] = number;
-    return `audio/voz_claudinho/${type}-${String(number).padStart(2, "0")}.mp3`;  }
+  function chooseVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    return voices.find((voice) => voice.lang.toLowerCase() === "pt-br")
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith("pt"))
+      || null;
+  }
 
   function cancel() {
     currentId++;
-    if (!currentAudio) return;
-    // Cancelar nunca deve disparar o callback onEnd da fala interrompida.
-    currentAudio.onplaying = null;
-    currentAudio.onended = null;
-    currentAudio.onerror = null;
-    currentAudio.pause();
-    currentAudio = null;
+    if (!supported) return;
+    if (currentUtterance) {
+      currentUtterance.onstart = null;
+      currentUtterance.onend = null;
+      currentUtterance.onerror = null;
+      currentUtterance = null;
+    }
+    window.speechSynthesis.cancel();
   }
 
-  /*
-   * Mantém o contrato usado pelo mascote: onStart, onEnd e onError.
-   * O texto permanece no balão;
-   */
   function speak(text, handlers = {}) {
     cancel();
-    if (!supported || !enabled) return false;
+    if (!supported || !enabled || !String(text).trim()) return false;
 
     const id = ++currentId;
-    const audio = new window.Audio(chooseClip(String(text)));
-    currentAudio = audio;
-    audio.volume = 0.75;
-    audio.preload = "auto";
+    const utterance = new SpeechSynthesisUtterance(String(text));
+    utterance.lang = "pt-BR";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 0.85;
+    const chosenVoice = chooseVoice();
+    if (chosenVoice) utterance.voice = chosenVoice;
+    currentUtterance = utterance;
 
-    let errorHandled = false;
-    const onError = () => {
-      if (id !== currentId || errorHandled) return;
-      errorHandled = true;
-      currentAudio = null;
-      if (handlers.onError) handlers.onError();
-    };
-
-    audio.onplaying = () => {
+    utterance.onstart = () => {
       if (id === currentId && handlers.onStart) handlers.onStart();
     };
-    audio.onended = () => {
+    utterance.onend = () => {
       if (id !== currentId) return;
-      currentAudio = null;
+      currentUtterance = null;
       if (handlers.onEnd) handlers.onEnd();
     };
-    audio.onerror = onError;
+    utterance.onerror = (event) => {
+      if (id !== currentId) return;
+      currentUtterance = null;
+      if (handlers.onError) handlers.onError(event);
+    };
 
     try {
-      const playback = audio.play();
-      if (playback && typeof playback.catch === "function") playback.catch(onError);
+      window.speechSynthesis.speak(utterance);
     } catch (err) {
-      onError();
+      currentUtterance = null;
+      if (handlers.onError) handlers.onError(err);
       return false;
     }
     return true;
