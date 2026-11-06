@@ -18,7 +18,6 @@ const claudinhoVoice = (() => {
 
   let currentId = 0;
   let currentUtterance = null;
-
   function chooseVoice() {
     const voices = window.speechSynthesis.getVoices();
     return voices.find((voice) => voice.lang.toLowerCase() === "pt-br")
@@ -47,7 +46,7 @@ const claudinhoVoice = (() => {
     utterance.lang = "pt-BR";
     utterance.rate = 1;
     utterance.pitch = 1;
-    utterance.volume = 0.85;
+    utterance.volume = 1.0;
     const chosenVoice = chooseVoice();
     if (chosenVoice) utterance.voice = chosenVoice;
     currentUtterance = utterance;
