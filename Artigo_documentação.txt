@@ -1,0 +1,33 @@
+DEVCLASH — ARTIGO TÉCNICO E DOCUMENTAÇÃO DO PROJETO
+=====================================================
+
+Para compreender o projeto DevClash de forma completa, consulte o artigo técnico
+produzido pela equipe. Ele documenta a proposta do quiz, sua arquitetura,
+as funcionalidades, as regras de negócio, o banco de dados PostgreSQL, o DER,
+a integração com a API, a hospedagem e as limitações conhecidas.
+
+ONDE ACESSAR
+------------
+Em uma nova guia abra:
+
+https://rinopeto.github.io/Artigo-Projeto-semestre/
+
+
+ESTRUTURA ESPERADA NO REPOSITÓRIO
+---------------------------------
+artigo/
+  index.html        -> artigo completo
+  style.css         -> apresentação visual e responsividade
+  der-devclash.png  -> diagrama entidade-relacionamento
+
+OBSERVAÇÕES
+-----------
+- O artigo descreve a versão documentada nos arquivos técnicos fornecidos
+  pela equipe (50 perguntas: 40 sobre SQL e 10 bônus de história da tecnologia;
+  sete tabelas no banco).
+- Para informações sobre alterações posteriores, consulte também o código
+  atualizado do projeto.
+- Este arquivo é apenas um ponto de acesso à documentação; não modifica
+  o funcionamento do sistema.
+
+Equipe DevClash

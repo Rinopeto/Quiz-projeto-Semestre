@@ -1,0 +1,94 @@
+# DevClash — Contexto, Minimundo e Requisitos 
+
+Este documento descreve o comportamento implementado no projeto, conforme os arquivos atuais de frontend, API e esquema PostgreSQL. Não representa funcionalidades planejadas que ainda não estejam presentes.
+
+## 1. Contexto e escopo
+
+O **DevClash** é um quiz educacional de tecnologia, com foco em SQL, PostgreSQL e modelagem de dados, complementado por perguntas bônus sobre história da tecnologia. O sistema identifica o jogador por nome, exibe perguntas de múltipla escolha, calcula a pontuação com limite de tempo e mostra a classificação final. Há um mascote animado chamado Claudinho, que reage ao desempenho e pode falar pelo leitor de texto nativo do navegador.
+
+### O sistema faz
+
+- Solicita o nome do jogador para iniciar.
+- Oferece um banco de **50 perguntas: 40 de SQL/bancos de dados e 10 bônus sobre história da tecnologia**.
+- Seleciona até **50 perguntas por partida** conforme `CONFIG.QUESTIONS_PER_GAME` e a quantidade disponível. Ordena as normais por dificuldade e deixa as bônus para o final.
+- Apresenta alternativas de múltipla escolha e permite mudar a seleção antes da confirmação.
+- Controla **50 segundos por pergunta** e calcula a pontuação de acordo com o tempo restante.
+- Mostra o resultado da questão, uma explicação e a referência consultada.
+- Salva partidas no PostgreSQL via API, quando disponível, e exibe o ranking geral. Na indisponibilidade da API, utiliza perguntas locais e/ou ranking da sessão conforme o caso.
+- Mostra reações visuais do mascote; no computador, a parte verde de seus olhos pode acompanhar o mouse quando próximo. O áudio opcional é sintetizado pelo navegador em português do Brasil.
+
+### O sistema não faz
+
+- Não utiliza cadastro com senha, e-mail ou autenticação de contas.
+- Não permite inserir ou editar perguntas pela interface de jogo.
+- Não garante armazenamento permanente do ranking quando a API está indisponível: o fallback utiliza `sessionStorage`.
+- Não depende de arquivos MP3 pré-gravados para a voz atual do mascote.
+
+## 2. Atores e usuários
+
+**Jogador/estudante:** informa nome, responde às questões, acompanha a pontuação, lê as explicações e consulta a posição no ranking.
+
+**Responsável pela manutenção (desenvolvedor/professor):** edita perguntas nos arquivos locais e/ou no banco de dados, configura a API e atualiza a aplicação. Não existe painel administrativo de edição no jogo.
+
+## 3. Minimundo — visão do cliente
+
+> Queremos uma plataforma de quiz chamada DevClash para treinar conhecimentos de SQL, PostgreSQL e tecnologia. Antes da partida, a pessoa informa seu nome. A aplicação dispõe de 50 questões, sendo 40 de SQL e assuntos relacionados e 10 bônus de história da tecnologia. Em cada rodada são apresentadas até 50 questões, com alternativas embaralhadas, 50 segundos por questão e confirmação de resposta. A pontuação depende do acerto e do tempo restante: acertos rendem de 3 a 10 pontos, erros confirmados rendem 1 ponto e respostas não enviadas dentro do prazo rendem 0. Ao final, o jogador vê o desempenho e o ranking. Quando o backend está disponível, o ranking é compartilhado entre os jogadores e permanece no banco; caso contrário, aparece a classificação da sessão. O mascote Claudinho fornece reações visuais e pode narrar suas falas usando a voz do navegador.
+
+## 4. Requisitos de dados (RD)
+
+- **RD01:** O jogador possui um nome (nickname) obrigatório, com até 20 caracteres conforme validação do backend.
+- **RD02:** Cada pergunta tem identificador, enunciado, categoria, dificuldade, alternativas, uma alternativa correta, explicação e fonte (nome e URL).
+- **RD03:** A questão pode ser marcada como bônus (`bonus`/`pergunta_bonus`).
+- **RD04:** A partida registra jogador, pontuação total, tempo total e início/término.
+- **RD05:** O registro de cada resposta associa partida e pergunta, alternativa selecionada (quando houver), status, pontos e tempo gasto.
+- **RD06:** A persistência relacional usa `categorias_perguntas`, `fontes`, `questao_quiz`, `opcoes_perguntas`, `jogadores`, `dados_partidas` e `registro_perguntas`.
+
+## 5. Regras de negócio (RN)
+
+- **RN01:** O nome é obrigatório antes da partida.
+- **RN02:** Há 50 questões no conjunto atual: 40 de SQL e áreas correlatas e 10 bônus de história da tecnologia.
+- **RN03:** A configuração atual é de até 50 perguntas por partida e 50 segundos para responder cada uma.
+- **RN04:** Perguntas normais aparecem em ordem de dificuldade crescente quando `SORT_BY_DIFFICULTY` está habilitado; bônus aparecem depois das normais. As alternativas são embaralhadas.
+- **RN05:** Pontos por acerto: 10 (40–50 s restantes), 8 (35–menos de 40 s), 6 (25–menos de 35 s), 4 (15–menos de 25 s) e 3 (mais de 0–menos de 15 s).
+- **RN06:** Resposta errada confirmada soma 1 ponto; tempo esgotado soma 0. Perguntas bônus usam a mesma pontuação.
+- **RN07:** A alternativa escolhida só é considerada resposta quando o jogador confirma; até lá, pode alterá-la.
+- **RN08:** No ranking geral, conta a melhor partida de cada jogador; desempate por menor tempo total, seguido dos critérios de ordenação da API.
+- **RN09:** Se não for possível obter o ranking geral, exibe-se a classificação local da sessão atual; respostas não são salvas permanentemente nessa modalidade.
+- **RN10:** O áudio do mascote pode ser desativado e o estado da preferência é salvo no navegador.
+
+## 6. Requisitos funcionais (RF)
+
+- **RF01:** Exibir tela inicial e receber o nickname antes de começar.
+- **RF02:** Buscar perguntas na API configurada, usando o conjunto local em caso de falha ou ausência de API.
+- **RF03:** Exibir uma pergunta por vez, com alternativas selecionáveis, dificuldade e temporizador.
+- **RF04:** Permitir confirmar a resposta e bloquear alterações após a confirmação ou o tempo esgotado.
+- **RF05:** Calcular automaticamente os pontos por questão e a pontuação acumulada.
+- **RF06:** Exibir explicação, resposta correta e link da fonte após a conclusão da pergunta.
+- **RF07:** Apresentar resumo final, ranking e opção de iniciar outra partida.
+- **RF08:** Enviar o registro da partida à API e, quando possível, consultar o ranking geral.
+- **RF09:** Apresentar o mascote Claudinho com expressões e reações aos eventos do quiz.
+- **RF10:** Reproduzir falas do Claudinho pela Web Speech API do navegador, com botão de ativar/desativar voz.
+- **RF11:** Permitir que a parte verde dos olhos do mascote acompanhe a aproximação do mouse em dispositivos compatíveis.
+
+## 7. Requisitos não funcionais (RNF)
+
+- **RNF01 — Tecnologias:** HTML5, CSS3 e JavaScript sem framework no frontend; Node.js/Express e PostgreSQL no backend.
+- **RNF02 — Usabilidade:** Interface responsiva, indicadores textuais de dificuldade e feedback não limitado a cores.
+- **RNF03 — Acessibilidade:** Navegação por teclado, foco visível, preferência de movimento reduzido e áudio opcional.
+- **RNF04 — Persistência:** PostgreSQL para dados compartilhados quando o backend está disponível; `sessionStorage` para fallback de ranking e `localStorage` para a preferência de voz.
+- **RNF05 — Compatibilidade:** Funcionalidade de voz dependente do suporte do navegador a `speechSynthesis` e das vozes instaladas; o jogo funciona sem áudio.
+- **RNF06 — Arquitetura:** A interface pode ser publicada como site estático; a API é serviço separado e acessado por HTTP.
+- **RNF07 — Organização:** Scripts separados para configuração, questões, fluxo do jogo, mascote e voz; backend com esquema SQL, carga inicial e consultas.
+
+## 8. Integração, arquivos e manutenção
+
+- `devclash/index.html`: interface e SVG do mascote.
+- `devclash/js/script.js`: configurações da partida, temporizador, pontuação, respostas e ranking.
+- `devclash/js/questions.js`: perguntas locais e tentativa de carregamento remoto.
+- `devclash/js/config.js`: URL base da API (atualmente configurada para serviço hospedado no Render).
+- `devclash/js/mascot.js`: mensagens, animações, estados e acompanhamento do ponteiro.
+- `devclash/js/voice.js`: sintetizador nativo de voz em pt-BR (`SpeechSynthesisUtterance`), sem MP3 externo; volume configurado nesta versão em `0.85`, limitado pela API ao máximo `1.0`.
+- `devclash/backend/src/app.js`: rotas `GET /api/health`, `GET /api/questions`, `POST /api/matches` e `GET /api/ranking`.
+- `devclash/backend/schema.sql`, `seed.sql` e `select.sql`: estrutura, carga de dados e consultas PostgreSQL.
+
+A documentação deve ser revisada sempre que forem alteradas a quantidade de perguntas, a duração, a pontuação, os endpoints, o esquema de dados ou o mecanismo de voz.
