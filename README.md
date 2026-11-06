@@ -1,73 +1,99 @@
-# DevClash
+# DevClash — Quiz de SQL e História da Tecnologia
 
-Quiz de SQL e bancos de dados (com algumas perguntas bônus de história da tecnologia) em HTML, CSS e JavaScript puro (sem frameworks), pensado para o GitHub Pages, com um backend opcional em Node.js + PostgreSQL. As cores seguem o tema claro do pgAdmin e a fonte é a JetBrains Mono, carregada do Google Fonts (sem internet, o navegador usa uma fonte monoespaçada do sistema).
+**DevClash** é um quiz educacional desenvolvido em HTML5, CSS3 e JavaScript puro para exercitar conhecimentos de SQL, modelagem e administração de bancos de dados PostgreSQL. Conta com o mascote animado **Claudinho**, perguntas com explicações e referências, sistema de pontos e ranking. O visual utiliza referências do pgAdmin e a fonte JetBrains Mono (com fallback monoespaçado).
+
+## Conteúdo e regras atuais
+
+- **50 questões cadastradas:** 40 sobre SQL, PostgreSQL, modelagem e ferramentas; **10 bônus de história da tecnologia**.
+- **50 questões por partida**, quando as 50 estiverem disponíveis na fonte de dados. O total efetivo depende das questões retornadas pela API ou do conjunto local; a constante `CONFIG.QUESTIONS_PER_GAME` em `devclash/js/script.js` define o limite.
+- Perguntas normais organizadas por dificuldade (fácil, média e difícil), seguidas das questões bônus; alternativas embaralhadas por partida.
+- **50 segundos por pergunta**. O jogador pode mudar a alternativa selecionada até confirmar.
+- Acertos rendem de **3 a 10 pontos** segundo o tempo restante; erro confirmado rende **1 ponto**; tempo esgotado rende **0**.
+- Após cada resposta, o jogo informa o resultado, explica a alternativa correta e disponibiliza o link da fonte. As questões bônus possuem identificação visual, mas seguem a mesma regra de pontuação.
+
+| Tempo restante no acerto | Pontos |
+| --- | ---: |
+| 40 a 50 segundos | 10 |
+| 35 a menos de 40 segundos | 8 |
+| 25 a menos de 35 segundos | 6 |
+| 15 a menos de 25 segundos | 4 |
+| Mais de 0 a menos de 15 segundos | 3 |
+| Resposta incorreta | 1 |
+| Tempo esgotado | 0 |
 
 ## Como executar
 
-**Só o front-end (perguntas locais):** abra `index.html` no navegador, ou rode `python -m http.server 8000` na pasta e acesse http://localhost:8000.
+O site do quiz está em **`devclash/index.html`**, e não na raiz do repositório.
 
-**Com backend e banco:** veja [backend/README.md](backend/README.md) e depois defina `API_BASE_URL` em `js/config.js`.
+1. Para executar apenas o front-end, abra `devclash/index.html` em um navegador moderno ou, preferencialmente, inicie um servidor local dentro de `devclash`:
+   ```bash
+   cd devclash
+   python -m http.server 8000
+   ```
+   Depois acesse `http://localhost:8000`.
+2. O arquivo `devclash/js/config.js` define `API_BASE_URL`, atualmente apontando para uma API hospedada no Render. O jogo tenta carregar perguntas e ranking pela API; se não conseguir obter as perguntas, usa as perguntas locais.
+3. Para configurar um backend próprio, consulte [`devclash/backend/README.md`](devclash/backend/README.md), configure o PostgreSQL e altere `API_BASE_URL` para o endereço da API. Para executar só com dados locais, defina `API_BASE_URL = ""`.
+4. Ao publicar no GitHub Pages, configure a publicação para servir a pasta `devclash` (ou disponibilize o conteúdo dessa pasta como raiz publicada).
 
-## Estrutura
+## Ranking e persistência
+
+Quando a API e o PostgreSQL estão disponíveis, uma partida concluída com respostas é enviada a `POST /api/matches`. O ranking geral vem de `GET /api/ranking` e mostra as melhores pontuações por jogador, com desempate por menor tempo total e critérios adicionais da API. A interface mostra os 10 primeiros e pode incluir a posição do jogador atual fora desse grupo.
+
+Na ausência do serviço de ranking, é exibido o **ranking da sessão**, guardado em `sessionStorage` (não em `localStorage` permanente). Assim, ele vale para a sessão atual do navegador. A preferência de voz do Claudinho é armazenada separadamente em `localStorage`.
+
+## Claudinho: animações e voz do navegador
+
+Claudinho é um mascote SVG que aparece na interface, reage a acertos, erros, dificuldade, tempo acabando e ao resultado da partida, além de piscar e movimentar o braço. Em dispositivos com mouse, **a parte verde dos olhos acompanha o ponteiro quando ele está próximo**, sem mover todo o personagem. As animações respeitam a preferência por movimento reduzido do sistema.
+
+A fala utiliza o **leitor de texto nativo do navegador** (`SpeechSynthesisUtterance` / Web Speech API), configurado em `devclash/js/voice.js` para priorizar uma voz em **português do Brasil**. **Não há necessidade dos antigos arquivos MP3** em `devclash/audio/voz_claudinho/`.
+
+- O botão de som próximo ao Claudinho permite ativar/desativar a voz; a preferência é lembrada no navegador.
+- Uma fala nova cancela a anterior, e os eventos de início/fim são usados para coordenar as reações visuais.
+- A voz disponível, a pronúncia e a liberação de reprodução variam entre navegadores, dispositivos e sistemas operacionais.
+- Os parâmetros em `devclash/js/voice.js` são `utterance.lang`, `utterance.rate`, `utterance.pitch` e `utterance.volume`. **O volume vai de `0` a `1`**: `1.0` é o máximo permitido pela API. A configuração presente nesta versão do código é `0.85` (85%).
+- Para alterar os textos do mascote, edite `MESSAGES` em `devclash/js/mascot.js`.
+
+## Organização do repositório
 
 ```text
-devclash/
-├── index.html
-├── css/
-│   ├── style.css            # tema atual (paleta do pgAdmin)
-│   ├── mascot.css           # posição, balão e animações do Claudinho
-│   └── theme-terminal.css   # tema terminal antigo, guardado como backup
-├── js/
-│   ├── config.js            # URL da API
-│   ├── questions.js         # perguntas locais + loadQuestions()
-│   ├── mascot.js            # Claudinho: humores, fala, piscadas e reações
-│   ├── voice.js             # voz do Claudinho (síntese de voz do navegador)
-│   └── script.js            # lógica do quiz, ranking e interface
-├── backend/                 # API Node.js + PostgreSQL
-└── README.md
+Quiz-projeto-Semestre-main/
+├── README.md                     # visão geral e instalação
+├── doc_date                      # contexto, minimundo e requisitos
+├── Artigo_documenta...txt        # material de apoio do projeto
+├── devclashlogo.png              # logo
+└── devclash/
+    ├── index.html                # interface do quiz e SVG do Claudinho
+    ├── css/
+    │   ├── style.css             # estilo principal
+    │   ├── mascot.css            # aparência e animações do mascote
+    │   └── theme-terminal.css    # tema alternativo/legado
+    ├── js/
+    │   ├── config.js             # endereço da API
+    │   ├── questions.js          # 50 perguntas locais e carregamento da API
+    │   ├── script.js             # fluxo da partida, tempo, pontos e ranking
+    │   ├── mascot.js             # reações, expressões e mensagens
+    │   └── voice.js              # síntese de voz nativa do navegador
+    └── backend/
+        ├── README.md             # instruções específicas da API
+        ├── src/                  # servidor Express, rotas e conexão com banco
+        ├── schema.sql            # estrutura relacional PostgreSQL
+        ├── seed.sql              # carga de perguntas
+        └── select.sql            # consultas SQL do projeto
 ```
 
-## Como o jogo funciona
+## Banco de dados e API
 
-- O jogador informa o nome e clica em "Começar" (RQ01).
-- Uma pergunta por vez, com uma única alternativa correta (RQ02). A alternativa pode ser trocada à vontade até clicar em "Confirmar resposta" (RQ06).
-- Cada pergunta mostra a dificuldade, sempre visível: **verde = fácil, laranja = médio, vermelho = difícil**. A cor vem acompanhada do texto e de pontinhos (●○○, ●●○, ●●●). Na partida, as perguntas vão do fácil ao difícil (`CONFIG.SORT_BY_DIFFICULTY`).
-- Cada pergunta tem 50 segundos. Acerto vale de 3 a 10 pontos conforme o tempo restante; resposta errada vale 1 ponto; tempo esgotado vale 0 (RQ03):
+O backend é implementado em **Node.js + Express + PostgreSQL**. O `schema.sql` utiliza as tabelas `categorias_perguntas`, `fontes`, `questao_quiz`, `opcoes_perguntas`, `jogadores`, `dados_partidas` e `registro_perguntas`, relacionadas por chaves primárias e estrangeiras.
 
-| Tempo restante | Pontos |
-| --- | ---: |
-| 50 a 40 s | 10 |
-| < 40 a 35 s | 8 |
-| < 35 a 25 s | 6 |
-| < 25 a 15 s | 4 |
-| < 15 a 1 s | 3 |
+| Método | Rota | Finalidade |
+| --- | --- | --- |
+| GET | `/api/health` | Verificar serviço e banco |
+| GET | `/api/questions?limit=50` | Buscar perguntas disponíveis |
+| POST | `/api/matches` | Registrar partida e respostas |
+| GET | `/api/ranking?limit=10&player=NOME` | Consultar classificação geral e posição do jogador |
 
-- Depois de responder, aparece a explicação com o link da **fonte** de onde a pergunta veio (RQ07).
-- Ao final, a pontuação e o ranking são exibidos (RQ04) e o jogador pode jogar de novo (RQ05). Com o backend no ar, a partida é salva e a tela troca o ranking da sessão pelo **ranking geral**: a melhor pontuação de cada jogador, vinda do banco (top 10 e, se ficou de fora, a linha do jogador). Se a API estiver fora do ar ou falhar, vale o ranking da sessão, que guarda só `{ name, points }` no `sessionStorage` e calcula a posição ao exibir. Partidas sem nenhuma resposta não são salvas.
-- O banco de perguntas tem 45 perguntas (30 de SQL e bancos de dados, 10 de aquecimento e 5 bônus de história da tecnologia). Por partida são sorteadas até `CONFIG.QUESTIONS_PER_GAME` perguntas (10).
-- As perguntas bônus (`bonus: true`) aparecem com o selo "★ Bônus". Elas valem os mesmos pontos das demais.
-
-## Claudinho, o mascote
-
-O Claudinho Robô fica no canto inferior direito da tela. Ele pisca, acena ao dar boas-vindas, fala num balão e reage ao jogo: feliz ao acertar (com falas diferentes para acerto rápido, lento e sequências), triste ao errar, surpreso quando o tempo está acabando, na pergunta difícil e no tempo esgotado, e comemora ou incentiva no resultado final.
-
-- O desenho é um SVG inline em `index.html`; `js/mascot.js` troca os atributos `data-eyes`, `data-mouth` e `data-arm`, e `css/mascot.css` mostra só o estado atual. Os frames seguem a folha de sprites original.
-- `script.js` só chama `mascot.onScreen`, `onQuestion`, `onTimeWarning`, `onAnswer` e `onResult`. Sem `mascot.js`, o quiz funciona normalmente.
-- Para editar as falas, veja `MESSAGES` em `js/mascot.js`. Para mudar de canto, troque `right` por `left` em `css/mascot.css`.
-- O desenho e o balão são decorativos (`aria-hidden`) e o mascote não captura cliques; só o botão de som, à esquerda dele, é clicável. Com `prefers-reduced-motion`, ele fica parado (o rosto ainda muda de expressão).
-
-### Voz do Claudinho
-
-`js/voice.js` faz o Claudinho falar as mesmas frases do balão, em pt-BR, com tom agudo e um bipe curto de robô antes de cada fala; a boca e o balão acompanham a fala. O botão redondo ao lado dele liga e desliga a voz (a escolha fica salva no navegador).
-
-- É a voz de síntese do próprio navegador, então o timbre muda conforme o navegador e o sistema (Edge e Chrome no Windows costumam ter boas vozes pt-BR; algumas vozes ignoram o tom). Para ajustar, veja `SETTINGS` (tom e velocidade) e `PREFERRED` (nomes de voz) em `js/voice.js`.
-- O navegador só libera o som depois do primeiro clique na página; por isso a saudação do início aparece só no balão.
-- Símbolos e termos de SQL têm leitura própria em `SPOKEN` (por exemplo, `*` vira "estrela").
+Para editar perguntas locais, altere `LOCAL_QUESTIONS` em `devclash/js/questions.js`. Para atualizar também as perguntas persistidas no banco, mantenha `devclash/backend/seed.sql` sincronizado e execute a inicialização indicada no README do backend.
 
 ## Acessibilidade
 
-Tudo é operável por teclado (Tab, Enter e Espaço), o foco fica visível e é movido a cada etapa, e acerto, erro, seleção, dificuldade e posição no ranking sempre aparecem também em texto ou símbolo, nunca só por cor.
-
-## Adicionar perguntas
-
-Local: inclua objetos em `LOCAL_QUESTIONS`, em `js/questions.js`, com `question`, `options`, `correctAnswer` (índice), `difficulty` (`facil`, `medio` ou `dificil`), `bonus` (opcional, `true` nas bônus), `category`, `explanation`, `sourceName` e `sourceUrl`. Trechos entre crases viram código. Com backend: edite `backend/seed.sql` e rode `npm run db:init`.
+O quiz oferece navegação por teclado, indicação textual da dificuldade e feedback de respostas sem depender exclusivamente de cores. A voz do Claudinho é opcional, e a partida permanece utilizável sem ela.
